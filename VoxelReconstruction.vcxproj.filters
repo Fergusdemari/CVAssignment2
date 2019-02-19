@@ -36,6 +36,9 @@
     <ClCompile Include="src\controllers\Scene3DRenderer.cpp">
       <Filter>src\controllers</Filter>
     </ClCompile>
+    <ClCompile Include="Settings.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\VoxelReconstruction.h">

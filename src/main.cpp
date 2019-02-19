@@ -9,6 +9,8 @@ using namespace nl_uu_science_gmt;
 int main(
 		int argc, char** argv)
 {
+	
+	//Settings::runCalibrationAndSave();
 	VoxelReconstruction::showKeys();
 	VoxelReconstruction vr("data" + std::string(PATH_SEP), 4);
 	vr.run(argc, argv);
