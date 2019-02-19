@@ -5,6 +5,6 @@ using namespace cv;
 using namespace std;
 
 void calibrateAndSave();
-Mat getAveragePicture(string input);
+bool getAveragePicture(string input1, string input2);
 
 #endif
