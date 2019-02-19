@@ -27,6 +27,7 @@
     <ClInclude Include="src\controllers\Glut.h" />
     <ClInclude Include="src\controllers\Reconstructor.h" />
     <ClInclude Include="src\controllers\Scene3DRenderer.h" />
+    <ClInclude Include="src\Settings.h" />
     <ClInclude Include="src\utilities\General.h" />
     <ClInclude Include="src\VoxelReconstruction.h" />
   </ItemGroup>

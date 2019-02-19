@@ -16,22 +16,22 @@
 namespace nl_uu_science_gmt
 {
 
-class VoxelReconstruction
-{
-	const std::string m_data_path;
-	const int m_cam_views_amount;
+	class VoxelReconstruction
+	{
+		const std::string m_data_path;
+		const int m_cam_views_amount;
 
-	std::vector<Camera*> m_cam_views;
+		std::vector<Camera*> m_cam_views;
 
-public:
-	VoxelReconstruction(const std::string &, const int);
-	virtual ~VoxelReconstruction();
+	public:
+		VoxelReconstruction(const std::string &, const int);
+		virtual ~VoxelReconstruction();
 
-	static void showKeys();
+		static void showKeys();
 
-	void run(int, char**);
-};
-
-} /* namespace nl_uu_science_gmt */
+		void run(int, char**);
+	};
+}
+/* namespace nl_uu_science_gmt */
 
 #endif /* VOXELRECONSTRUCTION_H_ */

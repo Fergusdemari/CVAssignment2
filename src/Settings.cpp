@@ -16,7 +16,7 @@ using namespace cv;
 using namespace std;
 
 #pragma warning(disable : 4996) //_CRT_SECURE_NO_WARNINGS
-bool newCamera = false;
+bool newCamera = true;
 Mat CameraMatrix;
 Mat DistortionCoEffs;
 
@@ -265,10 +265,10 @@ enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,
 	vector<vector<Point2f> > imagePoints);
 
-void calibrateAndSave() {
+static void calibrateAndSave() {
 	//! [file_read]
 	Settings s;
-	const string inputSettingsFile = "default.xml";
+	const string inputSettingsFile = "src/default.xml";
 	FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
 	if (!fs.isOpened())
 	{
@@ -695,25 +695,6 @@ static void saveCameraParams(Settings& s, Size& imageSize, Mat& cameraMatrix, Ma
 	}
 }
 
-static void saveCameraParamsShort(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
-
-	const vector<Mat>& rvecs, const vector<Mat>& tvecs,
-	const vector<float>& reprojErrs, const vector<vector<Point2f> >& imagePoints,
-	double totalAvgErr)
-{
-	FileStorage fs(s.outputFileName, FileStorage::WRITE);
-
-	time_t tm;
-	time(&tm);
-	struct tm *t2 = localtime(&tm);
-	char buf[1024];
-	strftime(buf, sizeof(buf), "%c", t2);
-	fs << "CameraMatrix" << cameraMatrix;
-	fs << "DistortionCoeffs" << distCoeffs;
-
-	
-}
-
 //! [run_and_save]
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, Mat& distCoeffs,
 	vector<vector<Point2f> > imagePoints)
@@ -729,40 +710,12 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, Mat& 
 		<< ". avg re projection error = " << totalAvgErr << endl;
 
 	if (ok)
-		saveCameraParamsShort(s, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, reprojErrs, imagePoints,
+		saveCameraParams(s, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, reprojErrs, imagePoints,
 			totalAvgErr);
 	return ok;
 }
+//! [run_and_save]
 
-Mat getAveragePicture(string input) {
-
-	vector<Mat> imageList;
-	VideoCapture inputVideo;
-	inputVideo.open(input);
-	for (int i = 0; i < 1; i++)
-	{
-		Mat temp;
-		inputVideo >> temp;
-		if (temp.empty()) {
-			cout << "Empty Background vid Image " << i << endl;
-		}
-		imageList.push_back(temp);
-	}
-
-	// This is where the sum of all pixels is going to end up
-	Mat sum(imageList[0].rows, imageList[0].cols, CV_8U);
-	sum.setTo(Scalar(0, 0, 0, 0));
-
-	Mat single;
-
-	for (int i = 0; i < imageList.size(); i++)
-	{
-		imageList[i].convertTo(single, CV_8U);
-		sum += single;
-	}
-
-	imshow("AverageImage", sum);
-	waitKey(0);
-
-
+bool static runItall() {
+	calibrateAndSave();
 }
