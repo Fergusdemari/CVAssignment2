@@ -66,8 +66,11 @@ Scene3DRenderer::Scene3DRenderer(
 	m_previous_frame = -1;
 
 	const int H = 0;
-	const int S = 0;
-	const int V = 0;
+	const int S = 29;
+	const int V = 96;
+	erode_threshold = 2;
+	dilate_threshold = 2;
+
 	m_h_threshold = H;
 	m_ph_threshold = H;
 	m_s_threshold = S;
@@ -79,6 +82,8 @@ Scene3DRenderer::Scene3DRenderer(
 	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
 	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
 	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+	createTrackbar("ErodeSize", VIDEO_WINDOW, &erode_threshold, 10);
+	createTrackbar("DilateSize", VIDEO_WINDOW, &dilate_threshold, 10);
 
 	createFloorGrid();
 	setTopView();
@@ -146,6 +151,18 @@ void Scene3DRenderer::processForeground(
 	bitwise_or(foreground, background, foreground);
 
 	// Improve the foreground image
+	Mat structuringElementErode = getStructuringElement(MORPH_RECT, Size(erode_threshold*2+1, erode_threshold*2+1), Point(erode_threshold, erode_threshold));
+	Mat structuringElementDilate = getStructuringElement(MORPH_RECT, Size(dilate_threshold*2+1, dilate_threshold *2+1), Point(dilate_threshold, dilate_threshold));
+
+	// dilate / erode to get rid of noise
+	dilate(foreground, foreground, structuringElementDilate);
+	erode(foreground, foreground, structuringElementErode);
+
+	//Fill holes in the person, kinda useful but might mess up with the hole between legs and chair
+	Mat floodFilledForeground = foreground.clone();
+	floodFill(floodFilledForeground, Point(0, 0), Scalar(255));
+	bitwise_not(floodFilledForeground, floodFilledForeground);
+	foreground = (floodFilledForeground | foreground);
 
 	camera->setForegroundImage(foreground);
 }

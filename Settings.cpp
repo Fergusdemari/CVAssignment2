@@ -740,12 +740,14 @@ bool getAveragePicture(string input1, string input2) {
 	vector<Mat> imageList;
 	VideoCapture inputVideo;
 	inputVideo.open(input1 + input2);
-	for (int i = 0; i < 100; i++)
+	int vidLength = inputVideo.get(CAP_PROP_FRAME_COUNT);
+	for (int i = 0; i < vidLength; i++)
 	{
 		Mat temp;
 		inputVideo >> temp;
 		if (temp.empty()) {
 			cout << "Empty Background vid Image " << i << endl;
+			continue;
 		}
 		imageList.push_back(temp);
 	}
@@ -763,6 +765,6 @@ bool getAveragePicture(string input1, string input2) {
 		sum += single;
 	}
 	sum.convertTo(sum, CV_8U, 1. / imageList.size());
-	imwrite(input1 + "background.png", sum);
+	imwrite(input1 + input2 + ".png", sum);
 	return 1;
 }

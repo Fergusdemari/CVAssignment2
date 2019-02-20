@@ -12,7 +12,7 @@ int main(
 {
 	for (int i = 1; i <= 4; i++)
 	{
-		getAveragePicture("data/cam" + to_string(i) + "/", "background.avi");
+		getAveragePicture("data/cam" + to_string(i) + "/", "video.avi");
 		waitKey(0);
 	}
 	//calibrateAndSave();
