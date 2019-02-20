@@ -415,6 +415,8 @@ public:
 	{
 		return m_square_side_len;
 	}
+
+	void setBestHSV();
 };
 
 } /* namespace nl_uu_science_gmt */

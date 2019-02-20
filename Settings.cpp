@@ -739,7 +739,7 @@ bool getAveragePicture(string input1, string input2) {
 	cout << input1 << endl;
 	vector<Mat> imageList;
 	VideoCapture inputVideo;
-	inputVideo.open(input1 + input2);
+	inputVideo.open(input1 + input2 + ".avi");
 	int vidLength = inputVideo.get(CAP_PROP_FRAME_COUNT);
 	for (int i = 0; i < vidLength; i++)
 	{
