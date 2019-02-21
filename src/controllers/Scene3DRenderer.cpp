@@ -255,10 +255,10 @@ namespace nl_uu_science_gmt
 		Point p(m.m10 / m.m00, m.m01 / m.m00);
 
 		//Draw circle
-		circle(drawing, p, 5, Scalar(0, 0, 255));
-		imshow("Contours", drawing);
-		imshow("mask", mask);
-		waitKey(0);
+		//circle(drawing, p, 5, Scalar(0, 0, 255));
+		//imshow("Contours", drawing);
+		//imshow("mask", mask);
+		//waitKey(0);
 		return p;
 	}
 
@@ -273,7 +273,7 @@ namespace nl_uu_science_gmt
 		int bestD = 0;
 		int bestE = 0;
 
-		Mat mask = imread("data/cam3/customMask.png");
+		Mat mask = imread("data/cam2/customMask.png");
 		cvtColor(mask, mask, CV_BGR2GRAY);
 
 		Point midPoint = findMiddle(mask);
@@ -287,12 +287,12 @@ namespace nl_uu_science_gmt
 
 		Mat frame;
 		VideoCapture inputVideo;
-		inputVideo.open("data/cam3/video.avi");
+		inputVideo.open("data/cam2/video.avi");
 		inputVideo >> frame;
 		inputVideo.release();
 
 		vector<Mat> background1;
-		Mat background2 = imread("data/cam3/background.png");
+		Mat background2 = imread("data/cam2/background.png");
 		Mat background3;
 		cvtColor(background2, background3, CV_BGR2HSV);  // from BGR to HSV color space
 		split(background3, background1);
@@ -301,16 +301,16 @@ namespace nl_uu_science_gmt
 		// Value bruteforcing / comparison to manual masks to get HSVED values.
 		for (int h = 0; h < 1; h += 50)
 		{
-			for (int s = 0; s < hsvMax; s += 30)
+			for (int s = 0; s < hsvMax; s += 10)
 			{
 				cout << "HSV picking: " << to_string(s * 100 / 255) << "%" << endl;
 
-				for (int v = 0; v < hsvMax; v += 30)
+				for (int v = 0; v < hsvMax; v += 10)
 				{
 
-					for (int e = 2; e < 3; e++)
+					for (int e = 0; e < 3; e++)
 					{
-						for (int d = 3; d < 4; d++)
+						for (int d = 0; d < 4; d++)
 						{
 							Mat localDistanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
 							/// Get HSV image for this pic
@@ -353,7 +353,7 @@ namespace nl_uu_science_gmt
 									float val = (float)mask.at<unsigned char>(x, y);
 									float val2 = (float)foreground.at<unsigned char>(x, y);
 									if (fabs(val - val2) > 0) {
-										float relDist = norm(midPoint - Point(x, y))/maxDistance;
+										float relDist = norm(midPoint - Point(y, x))/maxDistance;
 										localDifference += max(cos((relDist)*(3.1415926f)), 0);
 										circle(localDistanceMap, Point(y, x), 1, Scalar(0, 0, (max(cos((relDist)*(3.1415926f)), 0) * 255)));
 									}
