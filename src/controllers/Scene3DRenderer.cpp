@@ -9,12 +9,14 @@
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include "opencv2/features2d.hpp"
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
 #include <stddef.h>
 #include <string>
 #include <iostream>
 
+#include "../Settings.h"
 #include "../utilities/General.h"
 
 using namespace std;
@@ -22,7 +24,7 @@ using namespace cv;
 
 namespace nl_uu_science_gmt
 {
-
+	
 	/**
 	 * Constructor
 	 * Scene properties class (mostly called by Glut)
@@ -229,28 +231,68 @@ namespace nl_uu_science_gmt
 		m_floor_grid.push_back(edge4);
 	}
 
+	Point findMiddle(Mat mask) {
+
+		// 
+		Mat drawing = Mat::zeros(mask.size(), CV_8UC3);
+		vector<vector<Point>> contoursFound;
+		findContours(mask, contoursFound, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
+		// loop over contours, find the biggest one.
+		int biggestSize = 0;
+		int bestI = 0;
+		for (int i = 0; i < contoursFound.size(); i++)
+		{
+			if (contoursFound[i].size() > biggestSize) {
+				biggestSize = contoursFound[i].size();
+				bestI = i;
+			}
+		}
+		drawContours(drawing, contoursFound, bestI, Scalar(0, 255, 0), 5);
+
+		//Find middlepoint of biggest contour
+		Moments m = moments(contoursFound[bestI], true);
+		Point p(m.m10 / m.m00, m.m01 / m.m00);
+
+		//Draw circle
+		circle(drawing, p, 5, Scalar(0, 0, 255));
+		imshow("Contours", drawing);
+		imshow("mask", mask);
+		waitKey(0);
+		return p;
+	}
+
 	void Scene3DRenderer::setBestHSV() {
 		int hsvMax = 255;
 		int edMax = 5;
 
-		float difference = 10000000;
+		float difference = 1000000000;
 		int bestH = 0;
 		int bestS = 0;
 		int bestV = 0;
 		int bestD = 0;
 		int bestE = 0;
 
-		Mat mask = imread("data/cam4/customMask.png");
+		Mat mask = imread("data/cam3/customMask.png");
 		cvtColor(mask, mask, CV_BGR2GRAY);
+
+		Point midPoint = findMiddle(mask);
+		Mat distanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
+		float maxDistance = max(
+			max(norm(midPoint - Point(0, 0)),
+				norm(midPoint - Point(644, 486))),
+			max(norm(midPoint - Point(0, 486)),
+				norm(midPoint - Point(644, 0))));
+
 
 		Mat frame;
 		VideoCapture inputVideo;
-		inputVideo.open("data/cam4/video.avi");
+		inputVideo.open("data/cam3/video.avi");
 		inputVideo >> frame;
 		inputVideo.release();
 
 		vector<Mat> background1;
-		Mat background2 = imread("data/cam4/background.png");
+		Mat background2 = imread("data/cam3/background.png");
 		Mat background3;
 		cvtColor(background2, background3, CV_BGR2HSV);  // from BGR to HSV color space
 		split(background3, background1);
@@ -259,17 +301,18 @@ namespace nl_uu_science_gmt
 		// Value bruteforcing / comparison to manual masks to get HSVED values.
 		for (int h = 0; h < 1; h += 50)
 		{
-			for (int s = 0; s < hsvMax; s += 10)
+			for (int s = 0; s < hsvMax; s += 30)
 			{
-				cout << "HSV picking: " << to_string(s*100 / 255) << "%" << endl;
+				cout << "HSV picking: " << to_string(s * 100 / 255) << "%" << endl;
 
-				for (int v = 0; v < hsvMax; v += 10)
+				for (int v = 0; v < hsvMax; v += 30)
 				{
 
 					for (int e = 2; e < 3; e++)
 					{
 						for (int d = 3; d < 4; d++)
 						{
+							Mat localDistanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
 							/// Get HSV image for this pic
 							Mat hsv_image;
 							cvtColor(frame, hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
@@ -307,30 +350,18 @@ namespace nl_uu_science_gmt
 							{
 								for (int y = 0; y < 486; y++)
 								{
-									//Vec3b maskval = mask.at<Vec3b>(x, y);
-									//Vec3b fgval = foreground.at<Vec3b>(x, y);
-									//
-									//float val = (maskval[0] + maskval[1] + maskval[2]) / 3;
-									//float val2 = (fgval[0] + fgval[1] + fgval[2]) / 3;
-
-									//if (s == 60 && v == 90) {
-									//	float val = mask.at<Vec3b>(x, y)[0];
-									//	float val2 = mask.at<Vec3b>(x, y)[0];
-									//	if (fabs(val - val2) > 0)
-									//		localDifference++;
-									//}else{
 									float val = (float)mask.at<unsigned char>(x, y);
 									float val2 = (float)foreground.at<unsigned char>(x, y);
-									if (fabs(val - val2) > 0)
-										localDifference++;
-									//}
-
+									if (fabs(val - val2) > 0) {
+										float relDist = norm(midPoint - Point(x, y))/maxDistance;
+										localDifference += max(cos((relDist)*(3.1415926f)), 0);
+										circle(localDistanceMap, Point(y, x), 1, Scalar(0, 0, (max(cos((relDist)*(3.1415926f)), 0) * 255)));
+									}
 								}
 							}
-							//localDifference = localDifference / (float)(644 * 486);
-
 
 							if (localDifference < difference) {
+								distanceMap = localDistanceMap;
 								difference = localDifference;
 								bestH = h;
 								bestS = s;
@@ -344,7 +375,7 @@ namespace nl_uu_science_gmt
 				}
 			}
 		}
-
+		imshow("distanceMap", distanceMap);
 		m_h_threshold = bestH;
 		m_ph_threshold = bestH;
 		m_s_threshold = bestS;
@@ -354,5 +385,5 @@ namespace nl_uu_science_gmt
 		erode_threshold = bestE;
 		dilate_threshold = bestD;
 	}
-
-} /* namespace nl_uu_science_gmt */
+} 
+/* namespace nl_uu_science_gmt */

@@ -711,7 +711,7 @@ static void saveCameraParamsShort(Settings& s, Size& imageSize, Mat& cameraMatri
 	fs << "CameraMatrix" << cameraMatrix;
 	fs << "DistortionCoeffs" << distCoeffs;
 
-	
+
 }
 
 //! [run_and_save]
@@ -752,13 +752,13 @@ bool getAveragePicture(string input1, string input2) {
 		imageList.push_back(temp);
 	}
 
-	if(imageList.empty()) return 0;
+	if (imageList.empty()) return 0;
 
 	// This is where the sum of all pixels is going to end up
 	Mat sum(imageList[0].rows, imageList[0].cols, CV_64FC3);
 	sum.setTo(Scalar(0, 0, 0, 0));
 
-	Mat single;	
+	Mat single;
 	for (int i = 0; i < imageList.size(); i++)
 	{
 		imageList[i].convertTo(single, CV_64FC3);
