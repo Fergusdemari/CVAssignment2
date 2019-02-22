@@ -298,6 +298,7 @@ void calibrateAndSave() {
 	const Scalar RED(0, 0, 255), GREEN(0, 255, 0);
 	const char ESC_KEY = 27;
 
+	bool paused = false;
 	//! [get_input]
 	for (;;)
 	{
@@ -424,7 +425,11 @@ void calibrateAndSave() {
 		if (s.inputCapture.isOpened() && key == 'g')
 		{
 			mode = CAPTURING;
-			imagePoints.clear();
+			//imagePoints.clear();
+		}
+		else{
+			if (mode != CALIBRATED)
+				mode = DETECTION;
 		}
 		//! [await_input]
 	}

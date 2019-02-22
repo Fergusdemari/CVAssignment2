@@ -266,14 +266,14 @@ namespace nl_uu_science_gmt
 		int hsvMax = 255;
 		int edMax = 5;
 
-		float difference = 1000000000;
+		float difference = 10000000000;
 		int bestH = 0;
 		int bestS = 0;
 		int bestV = 0;
 		int bestD = 0;
 		int bestE = 0;
 
-		Mat mask = imread("data/cam2/customMask.png");
+		Mat mask = imread("data/cam3/customMask.png");
 		cvtColor(mask, mask, CV_BGR2GRAY);
 
 		Point midPoint = findMiddle(mask);
@@ -287,12 +287,12 @@ namespace nl_uu_science_gmt
 
 		Mat frame;
 		VideoCapture inputVideo;
-		inputVideo.open("data/cam2/video.avi");
+		inputVideo.open("data/cam3/video.avi");
 		inputVideo >> frame;
 		inputVideo.release();
 
 		vector<Mat> background1;
-		Mat background2 = imread("data/cam2/background.png");
+		Mat background2 = imread("data/cam3/background.png");
 		Mat background3;
 		cvtColor(background2, background3, CV_BGR2HSV);  // from BGR to HSV color space
 		split(background3, background1);
@@ -301,14 +301,14 @@ namespace nl_uu_science_gmt
 		// Value bruteforcing / comparison to manual masks to get HSVED values.
 		for (int h = 0; h < 1; h += 50)
 		{
-			for (int s = 0; s < hsvMax; s += 10)
+			for (int s = 0; s < hsvMax; s += 5)
 			{
 				cout << "HSV picking: " << to_string(s * 100 / 255) << "%" << endl;
 
-				for (int v = 0; v < hsvMax; v += 10)
+				for (int v = 0; v < hsvMax; v += 5)
 				{
 
-					for (int e = 0; e < 3; e++)
+					for (int e = 0; e < 4; e++)
 					{
 						for (int d = 0; d < 4; d++)
 						{

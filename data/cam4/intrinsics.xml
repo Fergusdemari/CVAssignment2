@@ -5,13 +5,13 @@
   <cols>3</cols>
   <dt>d</dt>
   <data>
-    4.8289027192085734e+02 0. 322. 0. 4.8289027192085734e+02 243. 0. 0.
+    4.9725383574710816e+02 0. 322. 0. 4.9725383574710816e+02 243. 0. 0.
     1.</data></CameraMatrix>
 <DistortionCoeffs type_id="opencv-matrix">
   <rows>5</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
-    -4.2601467672734561e-01 3.3011973492799024e-01 0. 0.
-    -1.7788608816828072e-01</data></DistortionCoeffs>
+    -4.0021548753559211e-01 2.7692054586875881e-01 0. 0.
+    -1.5550084925609517e-01</data></DistortionCoeffs>
 </opencv_storage>
