@@ -24,7 +24,7 @@ using namespace cv;
 
 namespace nl_uu_science_gmt
 {
-	
+
 	/**
 	 * Constructor
 	 * Scene properties class (mostly called by Glut)
@@ -231,7 +231,7 @@ namespace nl_uu_science_gmt
 		m_floor_grid.push_back(edge4);
 	}
 
-	Point findMiddle(Mat mask) {
+	vector<Point> findMiddle(Mat mask) {
 
 		// 
 		Mat drawing = Mat::zeros(mask.size(), CV_8UC3);
@@ -250,67 +250,82 @@ namespace nl_uu_science_gmt
 		}
 		drawContours(drawing, contoursFound, bestI, Scalar(0, 255, 0), 5);
 
+		Rect res = boundingRect(contoursFound[bestI]);
+
 		//Find middlepoint of biggest contour
-		Moments m = moments(contoursFound[bestI], true);
-		Point p(m.m10 / m.m00, m.m01 / m.m00);
+		//Moments m = moments(contoursFound[bestI], true);
+		//Point p(m.m10 / m.m00, m.m01 / m.m00);
 
 		//Draw circle
 		//circle(drawing, p, 5, Scalar(0, 0, 255));
 		//imshow("Contours", drawing);
 		//imshow("mask", mask);
 		//waitKey(0);
-		return p;
+		return contoursFound[bestI];
+	}
+
+
+	double clip(double n, double lower, double upper) {
+		return max(lower, min(n, upper));
 	}
 
 	void Scene3DRenderer::setBestHSV() {
 		int hsvMax = 255;
 		int edMax = 5;
 
-		float difference = 10000000000;
+		double difference = 10000000000;
 		int bestH = 0;
 		int bestS = 0;
 		int bestV = 0;
 		int bestD = 0;
 		int bestE = 0;
 
-		Mat mask = imread("data/cam3/customMask.png");
+		Mat mask = imread("data/cam2/customMask.png");
 		cvtColor(mask, mask, CV_BGR2GRAY);
 
-		Point midPoint = findMiddle(mask);
+		//Contour around main mask object
+		vector<Point> contour = findMiddle(mask);
+
+		//Calculating middle point
+		Moments m = moments(contour, true);
+		Point middlePoint(m.m10 / m.m00, m.m01 / m.m00);
+
+		//Calculating AABB
+		Rect AABB = boundingRect(contour);
 		Mat distanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
-		float maxDistance = max(
-			max(norm(midPoint - Point(0, 0)),
-				norm(midPoint - Point(644, 486))),
-			max(norm(midPoint - Point(0, 486)),
-				norm(midPoint - Point(644, 0))));
+		double maxDistance = max(
+			max(norm(middlePoint - Point(0, 0)),
+				norm(middlePoint - Point(644, 486))),
+			max(norm(middlePoint - Point(0, 486)),
+				norm(middlePoint - Point(644, 0))));
 
 
 		Mat frame;
 		VideoCapture inputVideo;
-		inputVideo.open("data/cam3/video.avi");
+		inputVideo.open("data/cam2/video.avi");
 		inputVideo >> frame;
 		inputVideo.release();
 
 		vector<Mat> background1;
-		Mat background2 = imread("data/cam3/background.png");
+		Mat background2 = imread("data/cam2/background.png");
 		Mat background3;
 		cvtColor(background2, background3, CV_BGR2HSV);  // from BGR to HSV color space
 		split(background3, background1);
 
 
 		// Value bruteforcing / comparison to manual masks to get HSVED values.
-		for (int h = 0; h < 1; h += 50)
+		for (int h = 0; h < 1; h += 10)
 		{
-			for (int s = 0; s < hsvMax; s += 5)
+			for (int s = 0; s < hsvMax; s += 10)
 			{
 				cout << "HSV picking: " << to_string(s * 100 / 255) << "%" << endl;
 
-				for (int v = 0; v < hsvMax; v += 5)
+				for (int v = 0; v < hsvMax; v += 10)
 				{
 
-					for (int e = 0; e < 4; e++)
+					for (int e = 2; e < 3; e++)
 					{
-						for (int d = 0; d < 4; d++)
+						for (int d = 3; d < 4; d++)
 						{
 							Mat localDistanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
 							/// Get HSV image for this pic
@@ -345,7 +360,7 @@ namespace nl_uu_science_gmt
 							///
 
 
-							float localDifference = 0;
+							double localDifference = 0;
 							for (int x = 0; x < 644; x++)
 							{
 								for (int y = 0; y < 486; y++)
@@ -353,9 +368,18 @@ namespace nl_uu_science_gmt
 									float val = (float)mask.at<unsigned char>(x, y);
 									float val2 = (float)foreground.at<unsigned char>(x, y);
 									if (fabs(val - val2) > 0) {
-										float relDist = norm(midPoint - Point(y, x))/maxDistance;
-										localDifference += max(cos((relDist)*(3.1415926f)), 0);
-										circle(localDistanceMap, Point(y, x), 1, Scalar(0, 0, (max(cos((relDist)*(3.1415926f)), 0) * 255)));
+										//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
+										double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
+										double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
+										// If outside of AABB, dont do the expensive polygon test
+										if (AABB.contains(Point(x, y))) {
+											if (pointPolygonTest(contour, Point(x, y), false) == 1) {
+												zeroToOne += 0.4;
+											}
+										}
+										localDifference += zeroToOne;
+
+										circle(localDistanceMap, Point(y, x), 1, Scalar(zeroToOne * 255, zeroToOne * 255, zeroToOne * 255));
 									}
 								}
 							}
@@ -375,6 +399,23 @@ namespace nl_uu_science_gmt
 				}
 			}
 		}
+		for (int x = 0; x < 644; x++)
+		{
+			for (int y = 0; y < 486; y++)
+			{
+				//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
+				double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
+				double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
+				// If outside of AABB, dont do the expensive polygon test
+				if (AABB.contains(Point(x, y))) {
+					zeroToOne += 0.05;
+					if (pointPolygonTest(contour, Point(x, y), false) == 1) {
+						zeroToOne = 2;
+					}
+				}
+				circle(distanceMap, Point(x, y), 1, Scalar(zeroToOne * 255, zeroToOne * 255, zeroToOne * 255));
+			}
+		}
 		imshow("distanceMap", distanceMap);
 		m_h_threshold = bestH;
 		m_ph_threshold = bestH;
@@ -385,5 +426,5 @@ namespace nl_uu_science_gmt
 		erode_threshold = bestE;
 		dilate_threshold = bestD;
 	}
-} 
+}
 /* namespace nl_uu_science_gmt */

@@ -328,3 +328,7 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+data/cam4/boardcornersOld.xml
+data/cam3/boardcornersOld.xml
+data/cam2/boardcornersOld.xml
+data/cam1/boardcornersOld.xml
