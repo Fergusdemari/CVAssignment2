@@ -369,17 +369,17 @@ namespace nl_uu_science_gmt
 									float val2 = (float)foreground.at<unsigned char>(x, y);
 									if (fabs(val - val2) > 0) {
 										//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
-										double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
+										double relDist = norm(middlePoint - Point(y, x)) / maxDistance;
 										double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
 										// If outside of AABB, dont do the expensive polygon test
 										if (AABB.contains(Point(x, y))) {
+											//zeroToOne += 0.05;
 											if (pointPolygonTest(contour, Point(x, y), false) == 1) {
-												zeroToOne += 0.4;
+												zeroToOne += 1;
 											}
 										}
+										circle(localDistanceMap, Point(y, x), 1, Scalar(0, 0, zeroToOne * 255));
 										localDifference += zeroToOne;
-
-										circle(localDistanceMap, Point(y, x), 1, Scalar(zeroToOne * 255, zeroToOne * 255, zeroToOne * 255));
 									}
 								}
 							}
@@ -399,24 +399,25 @@ namespace nl_uu_science_gmt
 				}
 			}
 		}
-		for (int x = 0; x < 644; x++)
-		{
-			for (int y = 0; y < 486; y++)
-			{
-				//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
-				double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
-				double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
-				// If outside of AABB, dont do the expensive polygon test
-				if (AABB.contains(Point(x, y))) {
-					zeroToOne += 0.05;
-					if (pointPolygonTest(contour, Point(x, y), false) == 1) {
-						zeroToOne = 2;
-					}
-				}
-				circle(distanceMap, Point(x, y), 1, Scalar(zeroToOne * 255, zeroToOne * 255, zeroToOne * 255));
-			}
-		}
-		imshow("distanceMap", distanceMap);
+		/// For Visualising the importance of pixel differences.
+		//for (int x = 0; x < 644; x++)
+		//{
+		//	for (int y = 0; y < 486; y++)
+		//	{
+		//		//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
+		//		double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
+		//		double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
+		//		// If outside of AABB, dont do the expensive polygon test
+		//		if (AABB.contains(Point(x, y))) {
+		//			//zeroToOne += 0.05;
+		//			if (pointPolygonTest(contour, Point(x, y), false) == 1) {
+		//				zeroToOne = 2;
+		//			}
+		//		}
+		//		circle(distanceMap, Point(x, y), 1, Scalar(0, 0, zeroToOne * 255));
+		//	}
+		//}
+		//imshow("distanceMap", distanceMap);
 		m_h_threshold = bestH;
 		m_ph_threshold = bestH;
 		m_s_threshold = bestS;
