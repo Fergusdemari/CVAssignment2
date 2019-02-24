@@ -29,7 +29,7 @@ Reconstructor::Reconstructor(
 		const vector<Camera*> &cs) :
 				m_cameras(cs),
 				m_height(2048),
-				m_step(32)
+				m_step(64)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
@@ -107,7 +107,17 @@ void Reconstructor::initialize()
 			pdone = done;
 			cout << done << "%..." << flush;
 		}
-
+		Scalar debugScalar;
+		vector<Mat> images;
+		images.push_back(m_cameras[0]->getVideoFrame(0));
+		images.push_back(m_cameras[1]->getVideoFrame(1));
+		images.push_back(m_cameras[2]->getVideoFrame(2));
+		images.push_back(m_cameras[3]->getVideoFrame(3));
+		for (int i = 0; i < images.size(); i++)
+		{
+			imshow(to_string(i), images[i]);
+		}
+		waitKey(0);
 		int y, x;
 		for (y = yL; y < yR; y += m_step)
 		{
@@ -116,6 +126,7 @@ void Reconstructor::initialize()
 			for (x = xL; x < xR; x += m_step)
 			{
 				const int xp = (x - xL) / m_step;
+
 
 				// Create all voxels
 				Voxel* voxel = new Voxel;
@@ -129,16 +140,20 @@ void Reconstructor::initialize()
 
 				for (size_t c = 0; c < m_cameras.size(); ++c)
 				{
-					Point point = m_cameras[c]->projectOnView(Point3f((float) x, (float) y, (float) z));
+					Point point = m_cameras[c]->projectOnView(Point3f((float)x, (float)y, (float)z));
 
 					// Save the pixel coordinates 'point' of the voxel projection on camera 'c'
-					voxel->camera_projection[(int) c] = point;
+					voxel->camera_projection[(int)c] = point;
 
 					// If it's within the camera's FoV, flag the projection
-					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height)
-						voxel->valid_camera_projection[(int) c] = 1;
-				}
+					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height) {
 
+						// It's all red, maybe it's only getting one value, maybe it gets only intensity?
+						Scalar f = images[c].at<unsigned char>(point.y, point.x);
+						voxel->valid_camera_projection[(int)c] = 1;
+						voxel->color = f;
+					}
+				}
 				//Writing voxel 'p' is not critical as it's unique (thread safe)
 				m_voxels[p] = voxel;
 			}

@@ -367,7 +367,7 @@ namespace nl_uu_science_gmt
 								{
 									float val = (float)mask.at<unsigned char>(x, y);
 									float val2 = (float)foreground.at<unsigned char>(x, y);
-									if (fabs(val - val2) > 0) {
+									if (val != val2) {
 										//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
 										double relDist = norm(middlePoint - Point(y, x)) / maxDistance;
 										double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
