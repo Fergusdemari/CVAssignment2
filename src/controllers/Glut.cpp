@@ -632,28 +632,61 @@ void Glut::update(
 
 	// Get the image and the foreground image (of set camera)
 	Mat canvas, foreground;
+	Mat foreground1, foreground2;
+	Mat foreground3, foreground4;
+	Mat canvas1, canvas2;
+	Mat canvas3, canvas4;
 	if (scene3d.getCurrentCamera() != -1)
 	{
-		canvas = scene3d.getCameras()[scene3d.getCurrentCamera()]->getFrame();
-		foreground = scene3d.getCameras()[scene3d.getCurrentCamera()]->getForegroundImage();
+		//canvas = scene3d.getCameras()[scene3d.getCurrentCamera()]->getFrame();
+		//foreground = scene3d.getCameras()[scene3d.getCurrentCamera()]->getForegroundImage();
+		foreground1 = scene3d.getCameras()[0]->getForegroundImage();
+		foreground2 = scene3d.getCameras()[1]->getForegroundImage();
+		foreground3 = scene3d.getCameras()[2]->getForegroundImage();
+		foreground4 = scene3d.getCameras()[3]->getForegroundImage();
+		canvas1 = scene3d.getCameras()[0]->getFrame();
+		canvas2 = scene3d.getCameras()[1]->getFrame();
+		canvas3 = scene3d.getCameras()[2]->getFrame();
+		canvas4 = scene3d.getCameras()[3]->getFrame();
 	}
 	else
 	{
-		canvas = scene3d.getCameras()[scene3d.getPreviousCamera()]->getFrame();
-		foreground = scene3d.getCameras()[scene3d.getPreviousCamera()]->getForegroundImage();
+		//canvas = scene3d.getCameras()[scene3d.getPreviousCamera()]->getFrame();
+		//foreground = scene3d.getCameras()[scene3d.getPreviousCamera()]->getForegroundImage();
+		foreground1 = scene3d.getCameras()[0]->getForegroundImage();
+		foreground2 = scene3d.getCameras()[1]->getForegroundImage();
+		foreground3 = scene3d.getCameras()[2]->getForegroundImage();
+		foreground4 = scene3d.getCameras()[3]->getForegroundImage();
+		canvas1 = scene3d.getCameras()[0]->getFrame();
+		canvas2 = scene3d.getCameras()[1]->getFrame();
+		canvas3 = scene3d.getCameras()[2]->getFrame();
+		canvas4 = scene3d.getCameras()[3]->getFrame();
 	}
 
 	// Concatenate the video frame with the foreground image (of set camera)
-	if (!canvas.empty() && !foreground.empty())
+	if (!canvas1.empty() && !foreground1.empty())
 	{
-		Mat fg_im_3c;
-		cvtColor(foreground, fg_im_3c, CV_GRAY2BGR);
-		hconcat(canvas, fg_im_3c, canvas);
-		imshow(VIDEO_WINDOW, canvas);
+		cvtColor(foreground1, foreground1, CV_GRAY2BGR);
+		cvtColor(foreground2, foreground2, CV_GRAY2BGR);
+		cvtColor(foreground3, foreground3, CV_GRAY2BGR);
+		cvtColor(foreground4, foreground4, CV_GRAY2BGR);
+		//hconcat(canvas, fg_im_3c, canvas);
+		hconcat(foreground1, foreground2, foreground1);
+		hconcat(foreground1, foreground3, foreground1);
+		hconcat(foreground1, foreground4, foreground1);
+		//canvas1 = foreground1.clone();
+		hconcat(canvas1, canvas2, canvas1);
+		hconcat(canvas1, canvas3, canvas1);
+		hconcat(canvas1, canvas4, canvas1);
+
+		vconcat(canvas1, foreground1, canvas1);
+
+		//resizeWindow(VIDEO_WINDOW, 2550, 1000);
+		imshow(VIDEO_WINDOW, canvas1);
 	}
 	else if (!canvas.empty())
 	{
-		imshow(VIDEO_WINDOW, canvas);
+		imshow(VIDEO_WINDOW, canvas1);
 	}
 
 	// Update the frame slider position
@@ -856,10 +889,15 @@ void Glut::drawVoxels()
 	for (size_t v = 0; v < voxels.size(); v++)
 	{
 		vector<GLfloat> color;
-		color.push_back((GLfloat)voxels[v]->color[2]);
-		color.push_back((GLfloat)voxels[v]->color[1]);
-		color.push_back((GLfloat)voxels[v]->color[0]);
-		glColor4f(color[2], color[1], color[0], 0.5f);
+		color.push_back((GLfloat)voxels[v]->color[2]/255);
+		color.push_back((GLfloat)voxels[v]->color[1]/255);
+		color.push_back((GLfloat)voxels[v]->color[0]/255);
+		//cout << to_string(color[0]) << endl;
+		//cout << to_string(color[1]) << endl;
+		//cout << to_string(color[2]) << endl;
+
+		//glColor4f(color[0], color[1], color[2], 0.5f);
+		glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
 		glVertex3f((GLfloat) voxels[v]->x, (GLfloat) voxels[v]->y, (GLfloat) voxels[v]->z);
 	}
 

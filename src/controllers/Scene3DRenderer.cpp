@@ -400,24 +400,49 @@ namespace nl_uu_science_gmt
 			}
 		}
 		/// For Visualising the importance of pixel differences.
-		//for (int x = 0; x < 644; x++)
-		//{
-		//	for (int y = 0; y < 486; y++)
-		//	{
-		//		//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
-		//		double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
-		//		double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
-		//		// If outside of AABB, dont do the expensive polygon test
-		//		if (AABB.contains(Point(x, y))) {
-		//			//zeroToOne += 0.05;
-		//			if (pointPolygonTest(contour, Point(x, y), false) == 1) {
-		//				zeroToOne = 2;
-		//			}
-		//		}
-		//		circle(distanceMap, Point(x, y), 1, Scalar(0, 0, zeroToOne * 255));
-		//	}
-		//}
-		//imshow("distanceMap", distanceMap);
+		for (int i = 1; i < 5; i++)
+		{
+			mask = imread("data/cam"+to_string(i)+"/customMask.png");
+			cvtColor(mask, mask, CV_BGR2GRAY);
+
+			//Contour around main mask object
+			contour = findMiddle(mask);
+
+			//Calculating middle point
+			m = moments(contour, true);
+			middlePoint = Point(m.m10 / m.m00, m.m01 / m.m00);
+
+			//Calculating AABB
+			AABB = boundingRect(contour);
+			distanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
+			maxDistance = max(
+				max(norm(middlePoint - Point(0, 0)),
+					norm(middlePoint - Point(644, 486))),
+				max(norm(middlePoint - Point(0, 486)),
+					norm(middlePoint - Point(644, 0))));
+
+			for (int x = 0; x < 644; x++)
+			{
+				for (int y = 0; y < 486; y++)
+				{
+					//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
+					double relDist = norm(middlePoint - Point(x, y)) / maxDistance;
+					double zeroToOne = clip(-log10((relDist - 0.02) / 2.5) - 0.7, 0, 1);
+					// If outside of AABB, dont do the expensive polygon test
+					if (AABB.contains(Point(x, y))) {
+						//zeroToOne += 0.05;
+						if (pointPolygonTest(contour, Point(x, y), false) == 1) {
+							zeroToOne = 2;
+						}
+					}
+					circle(distanceMap, Point(x, y), 1, Scalar(0, 0, zeroToOne * 255));
+				}
+			}
+			namedWindow("distanceMap " + to_string(i), WINDOW_NORMAL);
+			resizeWindow("distanceMap " + to_string(i), 630, 475);
+			imshow("distanceMap " + to_string(i), distanceMap);
+		}
+		
 		m_h_threshold = bestH;
 		m_ph_threshold = bestH;
 		m_s_threshold = bestS;

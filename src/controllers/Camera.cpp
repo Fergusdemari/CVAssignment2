@@ -396,7 +396,7 @@ bool Camera::detExtrinsics(
 	// Show the origin on the checkerboard
 	namedWindow("Origin", CV_WINDOW_KEEPRATIO);
 	imshow("Origin", canvas);
-	waitKey(1000);
+	waitKey(1);
 
 	return true;
 }

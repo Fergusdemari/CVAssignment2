@@ -29,7 +29,7 @@ Reconstructor::Reconstructor(
 		const vector<Camera*> &cs) :
 				m_cameras(cs),
 				m_height(2048),
-				m_step(64)
+				m_step(32)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
@@ -110,14 +110,16 @@ void Reconstructor::initialize()
 		Scalar debugScalar;
 		vector<Mat> images;
 		images.push_back(m_cameras[0]->getVideoFrame(0));
-		images.push_back(m_cameras[1]->getVideoFrame(1));
-		images.push_back(m_cameras[2]->getVideoFrame(2));
-		images.push_back(m_cameras[3]->getVideoFrame(3));
+		images.push_back(m_cameras[1]->getVideoFrame(0));
+		images.push_back(m_cameras[2]->getVideoFrame(0));
+		images.push_back(m_cameras[3]->getVideoFrame(0));
+
 		for (int i = 0; i < images.size(); i++)
 		{
-			imshow(to_string(i), images[i]);
+			//imshow(to_string(i), images[i]);
+			
 		}
-		waitKey(0);
+		//waitKey(0);
 		int y, x;
 		for (y = yL; y < yR; y += m_step)
 		{
@@ -151,7 +153,10 @@ void Reconstructor::initialize()
 						// It's all red, maybe it's only getting one value, maybe it gets only intensity?
 						Scalar f = images[c].at<unsigned char>(point.y, point.x);
 						voxel->valid_camera_projection[(int)c] = 1;
-						voxel->color = f;
+						voxel->color[2] = f[0];
+						voxel->color[2] = f[0];
+						voxel->color[2] = f[0];
+
 					}
 				}
 				//Writing voxel 'p' is not critical as it's unique (thread safe)
