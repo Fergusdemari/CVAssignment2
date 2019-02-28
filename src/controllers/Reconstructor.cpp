@@ -66,12 +66,12 @@ Reconstructor::~Reconstructor()
 void Reconstructor::initialize()
 {
 	// Cube dimensions from [(-m_height, m_height), (-m_height, m_height), (0, m_height)]
-	const int xL = -m_height;
-	const int xR = m_height;
-	const int yL = -m_height;
-	const int yR = m_height;
+	const int xL = -2*m_height;
+	const int xR = 2 * m_height;
+	const int yL = -2 * m_height;
+	const int yR = 2 * m_height;
 	const int zL = 0;
-	const int zR = m_height;
+	const int zR = 2 * m_height;
 	const int plane_y = (yR - yL) / m_step;
 	const int plane_x = (xR - xL) / m_step;
 	const int plane = plane_y * plane_x;
@@ -107,19 +107,7 @@ void Reconstructor::initialize()
 			pdone = done;
 			cout << done << "%..." << flush;
 		}
-		Scalar debugScalar;
-		vector<Mat> images;
-		images.push_back(m_cameras[0]->getVideoFrame(0));
-		images.push_back(m_cameras[1]->getVideoFrame(0));
-		images.push_back(m_cameras[2]->getVideoFrame(0));
-		images.push_back(m_cameras[3]->getVideoFrame(0));
 
-		for (int i = 0; i < images.size(); i++)
-		{
-			//imshow(to_string(i), images[i]);
-			
-		}
-		//waitKey(0);
 		int y, x;
 		for (y = yL; y < yR; y += m_step)
 		{
@@ -149,13 +137,8 @@ void Reconstructor::initialize()
 
 					// If it's within the camera's FoV, flag the projection
 					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height) {
-
-						// It's all red, maybe it's only getting one value, maybe it gets only intensity?
-						Scalar f = images[c].at<unsigned char>(point.y, point.x);
+						// Set colors maybe	
 						voxel->valid_camera_projection[(int)c] = 1;
-						voxel->color[2] = f[0];
-						voxel->color[2] = f[0];
-						voxel->color[2] = f[0];
 
 					}
 				}

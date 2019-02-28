@@ -10,9 +10,10 @@ using namespace nl_uu_science_gmt;
 int main(
 		int argc, char** argv)
 {
+	// Average Background Creator
 	//for (int i = 1; i <= 4; i++)
 	//{
-	//	getAveragePicture("data/cam" + to_string(i) + "/", "video");
+	//	getAveragePicture("data/cam" + to_string(i) + "/", "background");
 	//	waitKey(0);
 	//}
 	//calibrateAndSave();

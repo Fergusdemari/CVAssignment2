@@ -888,10 +888,10 @@ void Glut::drawVoxels()
 	vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
 	for (size_t v = 0; v < voxels.size(); v++)
 	{
-		vector<GLfloat> color;
-		color.push_back((GLfloat)voxels[v]->color[2]/255);
-		color.push_back((GLfloat)voxels[v]->color[1]/255);
-		color.push_back((GLfloat)voxels[v]->color[0]/255);
+		//vector<GLfloat> color;
+		//color.push_back((GLfloat)voxels[v]->color[2]/255);
+		//color.push_back((GLfloat)voxels[v]->color[1]/255);
+		//color.push_back((GLfloat)voxels[v]->color[0]/255);
 		//cout << to_string(color[0]) << endl;
 		//cout << to_string(color[1]) << endl;
 		//cout << to_string(color[2]) << endl;
