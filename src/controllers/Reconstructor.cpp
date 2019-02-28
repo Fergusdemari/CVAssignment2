@@ -28,8 +28,8 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs) :
 				m_cameras(cs),
-				m_height(2048),
-				m_step(32)
+				m_height(4096),
+				m_step(64)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
@@ -66,15 +66,16 @@ Reconstructor::~Reconstructor()
 void Reconstructor::initialize()
 {
 	// Cube dimensions from [(-m_height, m_height), (-m_height, m_height), (0, m_height)]
-	const int xL = -2*m_height;
-	const int xR = 2 * m_height;
-	const int yL = -2 * m_height;
-	const int yR = 2 * m_height;
+	const int xL = -m_height;
+	const int xR = m_height;
+	const int yL = -m_height;
+	const int yR = m_height;
 	const int zL = 0;
-	const int zR = 2 * m_height;
+	const int zR = m_height;
 	const int plane_y = (yR - yL) / m_step;
 	const int plane_x = (xR - xL) / m_step;
 	const int plane = plane_y * plane_x;
+	Point3f p = Point3f(3, 2, 0);
 
 	// Save the 8 volume corners
 	// bottom
@@ -88,6 +89,7 @@ void Reconstructor::initialize()
 	m_corners.push_back(new Point3f((float) xL, (float) yR, (float) zR));
 	m_corners.push_back(new Point3f((float) xR, (float) yR, (float) zR));
 	m_corners.push_back(new Point3f((float) xR, (float) yL, (float) zR));
+
 
 	// Acquire some memory for efficiency
 	cout << "Initializing " << m_voxels_amount << " voxels ";
@@ -117,7 +119,6 @@ void Reconstructor::initialize()
 			{
 				const int xp = (x - xL) / m_step;
 
-
 				// Create all voxels
 				Voxel* voxel = new Voxel;
 				voxel->x = x;
@@ -130,18 +131,16 @@ void Reconstructor::initialize()
 
 				for (size_t c = 0; c < m_cameras.size(); ++c)
 				{
-					Point point = m_cameras[c]->projectOnView(Point3f((float)x, (float)y, (float)z));
+					Point point = m_cameras[c]->projectOnView(Point3f((float) x, (float) y, (float) z));
 
 					// Save the pixel coordinates 'point' of the voxel projection on camera 'c'
-					voxel->camera_projection[(int)c] = point;
+					voxel->camera_projection[(int) c] = point;
 
 					// If it's within the camera's FoV, flag the projection
-					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height) {
-						// Set colors maybe	
-						voxel->valid_camera_projection[(int)c] = 1;
-
-					}
+					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height)
+						voxel->valid_camera_projection[(int) c] = 1;
 				}
+
 				//Writing voxel 'p' is not critical as it's unique (thread safe)
 				m_voxels[p] = voxel;
 			}

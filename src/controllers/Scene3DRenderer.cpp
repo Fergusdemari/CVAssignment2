@@ -231,7 +231,7 @@ namespace nl_uu_science_gmt
 		m_floor_grid.push_back(edge4);
 	}
 
-	vector<Point> findMiddle(Mat mask) {
+	vector<vector<Point>> findMiddle(Mat mask) {
 
 		// 
 		Mat drawing = Mat::zeros(mask.size(), CV_8UC3);
@@ -246,27 +246,30 @@ namespace nl_uu_science_gmt
 		biggestSize.push_back(vp);
 		biggestSize.push_back(vp);
 		biggestSize.push_back(vp);
+		int currentSmallestIndex = 0;
 
-		int bestI[4] = { -1, -1, -1, -1 };
-		
 		// Loop over all found contours
 		for (int i = 0; i < contoursFound.size(); i++)
 		{
-			// Loop over current biggest ones
-			for (int j = 0; j < biggestSize.size(); j++)
-			{
-				if (contoursFound[i].size() > biggestSize[j].size()) {
-					biggestSize[j] = contoursFound[i];
-					bestI[j] = i;
-					break;
+
+			// If it's bigger than the smallest one
+			if (contoursFound[i].size() > biggestSize[currentSmallestIndex].size()) {
+				// Replace the smallest one
+				biggestSize[currentSmallestIndex] = contoursFound[i];
+
+				// Then recalculate the smallest one
+				for (int k = 0; k < biggestSize.size(); k++)
+				{
+					if (biggestSize[k].size() < biggestSize[currentSmallestIndex].size()) {
+						currentSmallestIndex = k;
+					}
 				}
 			}
 		}
-		for (int i = 0; i < sizeof(biggestSize); i++)
-		{
-			drawContours(drawing, biggestSize, bestI[i], Scalar(0, 255, 0), 5);
-		}
-		
+
+		drawContours(drawing, biggestSize, -1, Scalar(0, 255, 0), 5);
+
+
 
 		//Rect res = boundingRect(contoursFound[bestI]);
 
@@ -278,7 +281,8 @@ namespace nl_uu_science_gmt
 		//circle(drawing, p, 5, Scalar(0, 0, 255));
 		imshow("Contours", drawing);
 		//imshow("mask", mask);
-		waitKey(0);
+		//waitKey(0);
+		return biggestSize;
 	}
 
 
@@ -301,20 +305,15 @@ namespace nl_uu_science_gmt
 		cvtColor(mask, mask, CV_BGR2GRAY);
 
 		//Contour around main mask object
-		vector<Point> contour = findMiddle(mask);
-
-		//Calculating middle point
-		Moments m = moments(contour, true);
-		Point middlePoint(m.m10 / m.m00, m.m01 / m.m00);
+		vector<vector<Point>> contour = findMiddle(mask);
 
 		//Calculating AABB
-		Rect AABB = boundingRect(contour);
+		vector<Rect> AABBs;
+		for (int i = 0; i < contour.size(); i++)
+		{
+			AABBs.push_back(boundingRect(contour[i]));
+		}
 		Mat distanceMap = Mat::zeros(Size(644, 486), CV_8UC3);
-		double maxDistance = max(
-			max(norm(middlePoint - Point(0, 0)),
-				norm(middlePoint - Point(644, 486))),
-			max(norm(middlePoint - Point(0, 486)),
-				norm(middlePoint - Point(644, 0))));
 
 
 		Mat frame;
@@ -382,20 +381,25 @@ namespace nl_uu_science_gmt
 							{
 								for (int y = 0; y < 486; y++)
 								{
-									float val = (float)mask.at<unsigned char>(x, y);
-									float val2 = (float)foreground.at<unsigned char>(x, y);
+									float val = (float)mask.at<unsigned char>(y, x);
+									float val2 = (float)foreground.at<unsigned char>(y, x);
 									if (val != val2) {
 										//double zeroToOne = clip(-log10((relDist-0.02)/2.5)-0.7, 0, 1);
-										double zeroToOne = 1;
+										double zeroToOne = 0.3;
 										// If outside of AABB, dont do the expensive polygon test
-										if (AABB.contains(Point(x, y))) {
-											//zeroToOne += 0.05;
-											if (pointPolygonTest(contour, Point(x, y), false) == 1) {
-												zeroToOne += 1;
+										for (int i = 0; i < contour.size(); i++)
+										{
+											if (AABBs[i].contains(Point(x, y))) {
+												zeroToOne += 0.3;
+												if (pointPolygonTest(contour[i], Point(x, y), false) == 1) {
+													zeroToOne += 1;
+												}
+
+												break;
 											}
 										}
-										circle(localDistanceMap, Point(y, x), 1, Scalar(0, 0, zeroToOne * 255));
-										localDifference += 1;
+										circle(localDistanceMap, Point(x, y), 1, Scalar(0, 0, zeroToOne * 255));
+										localDifference += zeroToOne;
 									}
 								}
 							}
@@ -456,9 +460,9 @@ namespace nl_uu_science_gmt
 		//	}
 		//	namedWindow("distanceMap " + to_string(i), WINDOW_NORMAL);
 		//	resizeWindow("distanceMap " + to_string(i), 630, 475);
-		//	imshow("distanceMap " + to_string(i), distanceMap);
+		imshow("distanceMap ", distanceMap);
 		//}
-		
+
 		m_h_threshold = bestH;
 		m_ph_threshold = bestH;
 		m_s_threshold = bestS;
