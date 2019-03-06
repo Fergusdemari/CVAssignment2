@@ -8,7 +8,7 @@
 using namespace nl_uu_science_gmt;
 
 int main(
-		int argc, char** argv)
+	int argc, char** argv)
 {
 	// Average Background Creator
 	//for (int i = 1; i <= 4; i++)

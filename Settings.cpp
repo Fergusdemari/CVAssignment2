@@ -427,7 +427,7 @@ void calibrateAndSave() {
 			mode = CAPTURING;
 			//imagePoints.clear();
 		}
-		else{
+		else {
 			if (mode != CALIBRATED)
 				mode = DETECTION;
 		}
