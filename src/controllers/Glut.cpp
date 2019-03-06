@@ -35,6 +35,9 @@
 using namespace std;
 using namespace cv;
 
+bool sampleSizeNotCalculated = true;
+vector<int> labels;
+
 namespace nl_uu_science_gmt
 {
 
@@ -107,6 +110,7 @@ int Glut::initializeWindows(const char* win_name)
 	int height = scene3d.getHeight();
 	int bits = 32;
 
+	
 	windowRect.left =(long)0;               //set left value to 0
 	windowRect.right =(long)width;//set right value to requested width
 	windowRect.top =(long)0;//set top value to 0
@@ -600,8 +604,23 @@ void Glut::update(
 		for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 			scene3d.getCameras()[c]->setVideoFrame(scene3d.getCurrentFrame());
 	}
+	if (scene3d.isPaused() && sampleSizeNotCalculated) {
+		sampleSizeNotCalculated = false;
+		int s = scene3d.getReconstructor().getVisibleVoxels().size();
+		//cout << "anca test: " << scene3d.getReconstructor().getVoxels().size() << endl;
+		cout << "anca test 2: " << s << endl;
+		vector<Point2f>points;
+		for (int i = 0; i < s; i++) {
+			points.push_back(cv::Point2f(scene3d.getReconstructor().getVisibleVoxels()[i]->x, scene3d.getReconstructor().getVisibleVoxels()[i]->y));
+		}
+		
+		vector<Point2f>centers;
+		cv::kmeans(points, 4, labels, 
+			TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
+			}
 	if (!scene3d.isPaused())
 	{
+		sampleSizeNotCalculated = true;
 		// If not paused move to the next frame
 		scene3d.setCurrentFrame(scene3d.getCurrentFrame() + 1);
 	}
@@ -877,7 +896,23 @@ void Glut::drawVoxels()
 	vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
 	for (size_t v = 0; v < voxels.size(); v++)
 	{
-		glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+		if (labels.size()!=0 && !sampleSizeNotCalculated){
+			if (labels[v] == 0) {
+				glColor4f(1, 0, 0, 0.5f);
+			}
+			else if (labels[v] == 1) {
+				glColor4f(1, 1, 0, 0.5f);
+			}
+			else if (labels[v] == 2) {
+				glColor4f(0, 0, 1, 0.5f);
+			}
+			else {
+				glColor4f(0, 0, 0, 1.5f);
+			}
+		}
+		else {
+			glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+		}
 		glVertex3f((GLfloat) voxels[v]->x, (GLfloat) voxels[v]->y, (GLfloat) voxels[v]->z);
 	}
 

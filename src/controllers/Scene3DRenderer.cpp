@@ -69,7 +69,12 @@ namespace nl_uu_science_gmt
 		m_current_frame = 0;
 		m_previous_frame = -1;
 
-		setBestHSV();
+		//setBestHSV();
+
+		//hardcode cuz setbesthsb is boring
+		m_h_threshold = 0;
+		m_s_threshold = 40;
+		m_v_threshold = 50;
 
 		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
 		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
