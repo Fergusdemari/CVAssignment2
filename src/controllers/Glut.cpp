@@ -573,6 +573,10 @@ namespace nl_uu_science_gmt
 #endif
 	}
 
+	int mergeHSVs(int h, int s, int v) {
+
+	}
+
 	/**
 	 * - Update the scene with a new frame from the video
 	 * - Handle the keyboard input from the OpenCV window
@@ -611,10 +615,96 @@ namespace nl_uu_science_gmt
 			for (int i = 0; i < s; i++) {
 				points.push_back(cv::Point2f(scene3d.getReconstructor().getVisibleVoxels()[i]->x, scene3d.getReconstructor().getVisibleVoxels()[i]->y));
 			}
+			
 
 			vector<Point2f>centers;
 			cv::kmeans(points, 4, labels,
 				TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
+
+			// first Vector layer is the 4 people
+			// second layer is for every person all intervals of colors
+			// third layer is what range it's in, and how often it occurs (currently only for one channel)
+			vector<vector<vector<float>>> allCamHistograms;
+			float bucketSize = 64;
+			float buckets = 256 / bucketSize;
+			vector<vector<float>> emptyPerson;
+
+			// Makes the empty buckets
+			for (int i = 0; i < buckets*buckets*buckets; i++)
+			{
+				emptyPerson.push_back({ i*bucketSize, 0 });
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				allCamHistograms.push_back(emptyPerson);
+			}
+
+
+			// Loop over every camera's image
+			vector<Camera*> cameras = scene3d.getCameras();
+			vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
+			int total[4] = { 0,0,0,0 };
+			// Loop over all voxels
+			for (int v = 0; v < voxels.size(); v++)
+			{
+				// Loop over all cameras
+				for (int i = 0; i < cameras.size(); i++)
+				{
+					
+					Mat currentCamImage = cameras[i]->getFrame().clone();
+					cvtColor(currentCamImage, currentCamImage, COLOR_BGR2HSV);
+					//
+					int x = (voxels[v]->camera_projection[0]).x;
+					int y = (voxels[v]->camera_projection[0]).y;
+					unsigned char * p = currentCamImage.ptr(y, x); // Y first, X after
+					float h = ((float)p[0]);
+					float s = ((float)p[1]);
+					float v = ((float)p[2]);
+
+
+					//Check which bucket to add to
+					for (int hi = 0; hi < 256 / bucketSize; hi++)
+					{
+						for (int si = 0; si < 256 / bucketSize; si++)
+						{
+							for (int vi = 0; vi < 256 / bucketSize; vi++)
+							{
+								if (h >= hi * bucketSize && h < (hi + 1)*bucketSize &&
+									s >= si * bucketSize && s < (si + 1)*bucketSize &&
+									v >= vi * bucketSize && v < (vi + 1)*bucketSize) {
+									allCamHistograms[labels[v]][hi * buckets * buckets + si * buckets + vi][1]++;
+									total[labels[v]]++;
+								}
+							}
+						}
+					}
+
+				}
+			}
+
+			
+			float checksum = 0;
+			// Normalize all buckets
+			for (int p = 0; p < 4; p++)
+			{
+				cout << "p: " << p << endl;
+				for (int i = 0; i < buckets*buckets*buckets; i++)
+				{
+					if (allCamHistograms[p][i][1] > 0.9) {
+						allCamHistograms[p][i][1] /= total[p];
+						cout << "bucket: " << i << ", count: " << allCamHistograms[p][i][1] << endl;
+						checksum += allCamHistograms[p][i][1];
+					}
+
+				}
+				cout << "checksum for p " << p << " is " << checksum << endl;
+				checksum = 0;
+			}
+			
+			
+
+
 		}
 		if (!scene3d.isPaused())
 		{
