@@ -36,6 +36,7 @@ namespace nl_uu_science_gmt
 
 		static void drawGrdGrid();
 		static void drawCamCoord();
+		static void drawCenters();
 		static void drawVolume();
 		static void drawArcball();
 		static void drawVoxels();

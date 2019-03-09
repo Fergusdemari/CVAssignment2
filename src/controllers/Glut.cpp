@@ -37,6 +37,8 @@ using namespace cv;
 
 bool sampleSizeNotCalculated = true;
 vector<int> labels;
+vector<Point2f> allCenters;
+vector<Point2f> centers;
 
 
 
@@ -288,7 +290,7 @@ namespace nl_uu_science_gmt
 			}
 			else if (key == 'r' || key == 'R')
 			{
-				if(scene3d.isPaused())
+				if (scene3d.isPaused())
 					refHistograms.clear();
 			}
 			else if (key == 'b' || key == 'B')
@@ -565,6 +567,7 @@ namespace nl_uu_science_gmt
 			drawArcball();
 
 		drawVoxels();
+		drawCenters();
 
 		if (scene3d.isShowOrg())
 			drawWCoord();
@@ -636,7 +639,7 @@ namespace nl_uu_science_gmt
 			scene3d.setCurrentFrame(FRAME_TO_USE);
 			for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 				scene3d.getCameras()[c]->setVideoFrame(FRAME_TO_USE);
-			cout << "anca ; " << scene3d.getCurrentFrame() << endl;
+			//cout << "anca ; " << scene3d.getCurrentFrame() << endl;
 		}
 
 		vector<Reconstructor::Voxel*> temp = scene3d.getReconstructor().getVisibleVoxels();
@@ -646,21 +649,29 @@ namespace nl_uu_science_gmt
 			for (int i = 0; i < s; i++) {
 				points.push_back(cv::Point2f(temp[i]->x, temp[i]->y));
 			}
-			
 
-			vector<Point2f>centers;
+
+			//vector<Point2f>centers;
+			
+			centers.clear();
 			labels = {};
 			cv::kmeans(points, 4, labels,
 				TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
+			if (!centers.empty()) {
+				allCenters.push_back(centers[0]);
+				allCenters.push_back(centers[1]);
+				allCenters.push_back(centers[2]);
+				allCenters.push_back(centers[3]);
+			}
 			// first Vector layer is the 4 people
 			// second layer is for every person all intervals of colors
 			// third layer is what range it's in, and how often it occurs
 			vector<vector<vector<float>>> tempHistogram;
-			
+
 			float bucketSize = 16;
 			float buckets = 256 / bucketSize;
 			vector<vector<float>> emptyPerson;
-			
+
 			// Makes the empty buckets
 			for (int i = 0; i < buckets*buckets*buckets; i++)
 			{
@@ -670,8 +681,8 @@ namespace nl_uu_science_gmt
 			{
 				tempHistogram.push_back(emptyPerson);
 			}
-			
-			
+
+
 			// Loop over every camera's image
 			vector<Camera*> cameras = scene3d.getCameras();
 			vector<Reconstructor::Voxel*> voxels = temp;
@@ -691,8 +702,8 @@ namespace nl_uu_science_gmt
 					float h = ((float)p[0]);
 					float s = ((float)p[1]);
 					float v = ((float)p[2]);
-			
-			
+
+
 					//Check which bucket to add to
 					for (int hi = 0; hi < 256 / bucketSize; hi++)
 					{
@@ -709,11 +720,11 @@ namespace nl_uu_science_gmt
 							}
 						}
 					}
-			
+
 				}
 			}
-			
-			
+
+
 			//float checksum = 0;
 			// Normalize all buckets
 			for (int p = 0; p < tempHistogram.size(); p++)
@@ -730,7 +741,7 @@ namespace nl_uu_science_gmt
 				//checksum = 0;
 			}
 			if (refHistograms.empty() && !scene3d.isPaused()) {
-				cout << "anca 2 ; " << scene3d.getCurrentFrame() << endl;
+				//cout << "anca 2 ; " << scene3d.getCurrentFrame() << endl;
 				// Copy histogram into reference pic
 				vector<vector<vector<float>>> temp2(tempHistogram);
 				refHistograms = temp2;
@@ -738,13 +749,13 @@ namespace nl_uu_science_gmt
 				scene3d.setCurrentFrame(1);
 				for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 					scene3d.getCameras()[c]->setVideoFrame(1);
-				cout << "anca 3 ;" << scene3d.getCurrentFrame() << endl;
+				//cout << "anca 3 ;" << scene3d.getCurrentFrame() << endl;
 			}
 			//if paused same as above but no changing frames shit
 			if (refHistograms.empty() && scene3d.isPaused()) {
 				vector<vector<vector<float>>> temp2(tempHistogram);
-					refHistograms = temp2;
-				cout << "anca 4 ;" << scene3d.getCurrentFrame() << endl;
+				refHistograms = temp2;
+				//cout << "anca 4 ;" << scene3d.getCurrentFrame() << endl;
 			}
 
 			//for (int i = 0; i < buckets*buckets*buckets; i++)
@@ -753,7 +764,7 @@ namespace nl_uu_science_gmt
 			//		cout << "bucket: " << i << ", count: " << refHistograms[0][i][1] << endl;
 			//}
 			//cout << "done\n";
-			
+
 			vector<vector<float>> scores;
 			vector<float> bestScores;
 			// Chi squared to compare two histograms
@@ -788,7 +799,7 @@ namespace nl_uu_science_gmt
 												   {3,1,0,2},
 												   {3,1,2,0},
 												   {3,2,0,1},
-												   {3,2,1,0}};
+												   {3,2,1,0} };
 			float bestSol = 100000000;
 			float bestI = 0;
 			for (int i = 0; i < permutations.size(); i++)
@@ -815,22 +826,28 @@ namespace nl_uu_science_gmt
 			{
 				if (labels[i] == 0) {
 					temp[i]->color = Scalar(1, 0, 0, 0.5f);
+					//cout << "Testing tracking 0: " << centers[0] << endl;
 				}
 				else if (labels[i] == 1) {
 					temp[i]->color = Scalar(0, 1, 0, 0.5f);
+					//cout << "Testing tracking 1: " << centers[1] << endl;
 				}
 				else if (labels[i] == 2) {
 					temp[i]->color = Scalar(0, 0, 1, 0.5f);
+					//cout << "Testing tracking 2: " << centers[2] << endl;
 				}
 				else if (labels[i] == 3) {
 					temp[i]->color = Scalar(0, 1, 1, 0.5f);
+					//cout << "Testing tracking 3: " << centers[3] << endl;
 				}
 				else {
 					cout << "uhm how: " << labels[i] << endl;
 					temp[i]->color = Scalar(0, 0, 0, 0);
 				}
 			}
-
+			//for (int i = 0; i < 4; i++) {
+			//	cout << " centru " << i << " : " << centers[i];
+			//}
 		}
 		if (!scene3d.isPaused())
 		{
@@ -944,8 +961,52 @@ namespace nl_uu_science_gmt
 			glVertex3f((GLfloat)floor_grid[3][g]->x, (GLfloat)floor_grid[3][g]->y, (GLfloat)floor_grid[3][g]->z);
 		}
 
+		for (int i = 0; i < 4; i++) {
+			if (!centers.empty())
+				allCenters.push_back(centers[i]);
+			//cout << " centru " << i << " : " << centers[i];
+		}
+
+		//for (int i = 0; i < allCenters.size(); i += 4) {
+		//	glColor4f(1, 0, 0, 0.5f);
+		//	glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+		//}
+
 		glEnd();
 		glPopMatrix();
+	}
+
+	void Glut::drawCenters() {
+		if (!allCenters.empty()) {
+			glPushMatrix();
+
+			// apply default translation
+			glTranslatef(0, 0, 0);
+			glPointSize(3.0f);
+			glBegin(GL_POINTS);
+
+			//cout << " wtf ";
+
+			for (int i = 0; i < allCenters.size(); i += 4) {
+				glColor4f(1, 0, 0, 0.5f);
+				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+			}
+
+			for (int i = 1; i < allCenters.size(); i += 4) {
+				glColor4f(0, 1, 0, 0.5f);
+				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+			}
+			for (int i = 2; i < allCenters.size(); i += 4) {
+				glColor4f(0, 0, 1, 0.5f);
+				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+			}
+			for (int i = 3; i < allCenters.size(); i += 4) {
+				glColor4f(0, 1, 1, 0.5f);
+				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+			}
+			glEnd();
+			glPopMatrix();
+		}
 	}
 
 	/**
@@ -1092,7 +1153,7 @@ namespace nl_uu_science_gmt
 		glEnd();
 		glPopMatrix();
 #endif
-	}
+}
 
 	/**
 	 * Draw all visible voxels
