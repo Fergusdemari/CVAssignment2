@@ -657,12 +657,12 @@ namespace nl_uu_science_gmt
 			labels = {};
 			cv::kmeans(points, 4, labels,
 				TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
-			if (!centers.empty()) {
+			/*if (!centers.empty()) {
 				allCenters.push_back(centers[0]);
 				allCenters.push_back(centers[1]);
 				allCenters.push_back(centers[2]);
 				allCenters.push_back(centers[3]);
-			}
+			}*/
 			// first Vector layer is the 4 people
 			// second layer is for every person all intervals of colors
 			// third layer is what range it's in, and how often it occurs
@@ -815,12 +815,27 @@ namespace nl_uu_science_gmt
 				}
 			}
 			bestScores = permutations[bestI];
+			
 			//cout << bestSol << " = best" << endl;
 			//Replacing the labels with the better fitting counterpart
 			for (int i = 0; i < labels.size(); i++)
 			{
 				labels[i] = bestScores[labels[i]];
 			}
+
+			vector<Point2f>tempCenters;
+			for (int i = 0; i < bestScores.size(); i++) {
+				tempCenters.push_back(centers[bestScores[i]]);
+			}
+
+			if (!tempCenters.empty()) {
+				allCenters.push_back(tempCenters[0]);
+				allCenters.push_back(tempCenters[1]);
+				allCenters.push_back(tempCenters[2]);
+				allCenters.push_back(tempCenters[3]);
+			}
+
+			tempCenters.clear();
 
 			for (int i = 0; i < labels.size(); i++)
 			{
@@ -982,7 +997,7 @@ namespace nl_uu_science_gmt
 
 			// apply default translation
 			glTranslatef(0, 0, 0);
-			glPointSize(3.0f);
+			glPointSize(6.0f);
 			glBegin(GL_POINTS);
 
 			//cout << " wtf ";
