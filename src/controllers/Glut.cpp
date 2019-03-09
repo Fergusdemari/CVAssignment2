@@ -35,7 +35,6 @@
 using namespace std;
 using namespace cv;
 
-bool sampleSizeNotCalculated = true;
 vector<int> labels;
 vector<Point2f> allCenters;
 vector<Point2f> centers;
@@ -47,6 +46,7 @@ namespace nl_uu_science_gmt
 
 	Glut* Glut::m_Glut;
 	vector<vector<vector<float>>> refHistograms;
+	vector<Point2f> lastPositions;
 	Glut::Glut(
 		Scene3DRenderer &s3d) :
 		m_scene3d(s3d)
@@ -654,9 +654,16 @@ namespace nl_uu_science_gmt
 			//vector<Point2f>centers;
 			
 			centers.clear();
-			labels = {};
 			cv::kmeans(points, 4, labels,
 				TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
+
+			if (lastPositions.empty()) {
+				for (int i = 0; i < 4; i++)
+				{
+					lastPositions.push_back(centers[i]);
+				}
+			}
+
 			/*if (!centers.empty()) {
 				allCenters.push_back(centers[0]);
 				allCenters.push_back(centers[1]);
@@ -725,23 +732,19 @@ namespace nl_uu_science_gmt
 			}
 
 
-			//float checksum = 0;
 			// Normalize all buckets
 			for (int p = 0; p < tempHistogram.size(); p++)
 			{
 				for (int i = 0; i < buckets*buckets*buckets; i++)
 				{
+					// Only normalise it if the value is not 0, saves cpu
 					if (tempHistogram[p][i][1] > 0.9) {
-						//cout << "before: " << to_string(tempHistogram[p][i][1]) << endl;
 						tempHistogram[p][i][1] /= total[p];
-						//cout << "after: " << to_string(tempHistogram[p][i][1]) << endl;
-						//checksum += allCamHistograms[p][i][1];
 					}
 				}
-				//checksum = 0;
 			}
+
 			if (refHistograms.empty() && !scene3d.isPaused()) {
-				//cout << "anca 2 ; " << scene3d.getCurrentFrame() << endl;
 				// Copy histogram into reference pic
 				vector<vector<vector<float>>> temp2(tempHistogram);
 				refHistograms = temp2;
@@ -749,21 +752,12 @@ namespace nl_uu_science_gmt
 				scene3d.setCurrentFrame(1);
 				for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 					scene3d.getCameras()[c]->setVideoFrame(1);
-				//cout << "anca 3 ;" << scene3d.getCurrentFrame() << endl;
 			}
 			//if paused same as above but no changing frames shit
-			if (refHistograms.empty() && scene3d.isPaused()) {
+			if (scene3d.isPaused()) {
 				vector<vector<vector<float>>> temp2(tempHistogram);
 				refHistograms = temp2;
-				//cout << "anca 4 ;" << scene3d.getCurrentFrame() << endl;
 			}
-
-			//for (int i = 0; i < buckets*buckets*buckets; i++)
-			//{
-			//	if (refHistograms[0][i][1] > 0)
-			//		cout << "bucket: " << i << ", count: " << refHistograms[0][i][1] << endl;
-			//}
-			//cout << "done\n";
 
 			vector<vector<float>> scores;
 			vector<float> bestScores;
@@ -772,34 +766,32 @@ namespace nl_uu_science_gmt
 			for (int i = 0; i < refHistograms.size(); i++)
 			{
 				scores.push_back(histoCompare(tempHistogram[i]));
-				//cout << "i: " << i << ", bestMatch" << to_string(scores[i]) << endl;
 			}
 
 			// Finding the absolute best combinations
-			vector<vector<float>> permutations = { {0,1,2,3},
-												   {0,1,3,2},
-												   {0,2,1,3},
-												   {0,2,3,1},
-												   {0,3,1,2},
-												   {0,3,2,1},
-												   {1,0,2,3},
-												   {1,0,3,2},
-												   {1,2,0,3},
-												   {1,2,3,0},
-												   {1,3,0,2},
-												   {1,3,2,0},
-												   {2,0,1,3},
-												   {2,0,3,1},
-												   {2,1,0,3},
-												   {2,1,3,0},
-												   {2,3,0,1},
-												   {2,3,1,0},
-												   {3,0,1,2},
-												   {3,0,2,1},
-												   {3,1,0,2},
-												   {3,1,2,0},
-												   {3,2,0,1},
-												   {3,2,1,0} };
+			vector<vector<float>> permutations = { {0,1,2,3}, {0,1,3,2}, {0,2,1,3}, {0,2,3,1}, {0,3,1,2}, {0,3,2,1}, 
+												   {1,0,2,3}, {1,0,3,2}, {1,2,0,3}, {1,2,3,0}, {1,3,0,2}, {1,3,2,0},
+												   {2,0,1,3}, {2,0,3,1}, {2,1,0,3}, {2,1,3,0}, {2,3,0,1}, {2,3,1,0},
+												   {3,0,1,2}, {3,0,2,1}, {3,1,0,2}, {3,1,2,0}, {3,2,0,1}, {3,2,1,0} };
+
+			//float bestSol = 100000000;
+			//float bestI = 0;
+			//for (int i = 0; i < permutations.size(); i++)
+			//{
+			//	float tempSum = 0;
+			//	for (int j = 0; j < 4; j++)
+			//	{
+			//		tempSum += scores[j][permutations[i][j]];
+			//	}
+			//	if (tempSum < bestSol) {
+			//		bestSol = tempSum;
+			//		bestI = i;
+			//	}
+			//}
+			//bestScores = permutations[bestI];
+			
+			//Checking clusters' center position and swap around if too far away
+
 			float bestSol = 100000000;
 			float bestI = 0;
 			for (int i = 0; i < permutations.size(); i++)
@@ -807,7 +799,9 @@ namespace nl_uu_science_gmt
 				float tempSum = 0;
 				for (int j = 0; j < 4; j++)
 				{
-					tempSum += scores[j][permutations[i][j]];
+					float x = (lastPositions[j].x - centers[permutations[i][j]].x);
+					float y = (lastPositions[j].y - centers[permutations[i][j]].y);
+					tempSum += sqrtf(x*x + y * y);
 				}
 				if (tempSum < bestSol) {
 					bestSol = tempSum;
@@ -815,27 +809,22 @@ namespace nl_uu_science_gmt
 				}
 			}
 			bestScores = permutations[bestI];
-			
-			//cout << bestSol << " = best" << endl;
-			//Replacing the labels with the better fitting counterpart
+
+			//Replacing the labels with the better fitting counterpart according to Histograms
 			for (int i = 0; i < labels.size(); i++)
 			{
 				labels[i] = bestScores[labels[i]];
 			}
 
-			vector<Point2f>tempCenters;
 			for (int i = 0; i < bestScores.size(); i++) {
-				tempCenters.push_back(centers[bestScores[i]]);
+				allCenters.push_back(centers[bestScores[i]]);
 			}
 
-			if (!tempCenters.empty()) {
-				allCenters.push_back(tempCenters[0]);
-				allCenters.push_back(tempCenters[1]);
-				allCenters.push_back(tempCenters[2]);
-				allCenters.push_back(tempCenters[3]);
+			for (int i = 0; i < 4; i++)
+			{
+				lastPositions[i] = centers[bestScores[i]];
 			}
 
-			tempCenters.clear();
 
 			for (int i = 0; i < labels.size(); i++)
 			{
@@ -856,7 +845,7 @@ namespace nl_uu_science_gmt
 					//cout << "Testing tracking 3: " << centers[3] << endl;
 				}
 				else {
-					cout << "uhm how: " << labels[i] << endl;
+					cout << "Unusual label found while setting voxelcolors " << labels[i] << endl;
 					temp[i]->color = Scalar(0, 0, 0, 0);
 				}
 			}
@@ -1002,22 +991,15 @@ namespace nl_uu_science_gmt
 
 			//cout << " wtf ";
 
-			for (int i = 0; i < allCenters.size(); i += 4) {
+			for (int i = 0; i < allCenters.size(); i+=4) {
 				glColor4f(1, 0, 0, 0.5f);
 				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
-			}
-
-			for (int i = 1; i < allCenters.size(); i += 4) {
 				glColor4f(0, 1, 0, 0.5f);
-				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
-			}
-			for (int i = 2; i < allCenters.size(); i += 4) {
+				glVertex3f((GLfloat)allCenters[i+1].x, allCenters[i + 1].y, 0);
 				glColor4f(0, 0, 1, 0.5f);
-				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
-			}
-			for (int i = 3; i < allCenters.size(); i += 4) {
+				glVertex3f((GLfloat)allCenters[i+2].x, allCenters[i + 2].y, 0);
 				glColor4f(0, 1, 1, 0.5f);
-				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
+				glVertex3f((GLfloat)allCenters[i+3].x, allCenters[i + 3].y, 0);
 			}
 			glEnd();
 			glPopMatrix();
