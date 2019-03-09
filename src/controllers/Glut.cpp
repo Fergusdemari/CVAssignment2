@@ -288,9 +288,8 @@ namespace nl_uu_science_gmt
 			}
 			else if (key == 'r' || key == 'R')
 			{
-				refHistograms.clear();
-				bool paused = scene3d.isPaused();
-				scene3d.setPaused(!paused);
+				if(scene3d.isPaused())
+					refHistograms.clear();
 			}
 			else if (key == 'b' || key == 'B')
 			{
