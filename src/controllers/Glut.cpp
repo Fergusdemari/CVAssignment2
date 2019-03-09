@@ -575,9 +575,9 @@ namespace nl_uu_science_gmt
 
 	//Chisquare compares histograms, need to be same size
 	vector<float> histoCompare(vector<vector<float>> a) {
-		vector<float> res;
 		//cout << "Comparing" << endl;
-		for (int i = 0; i < refHistograms.size(); i++){
+		vector<float> res;
+		for (int i = 0; i < refHistograms.size(); i++) {
 			float chi = 0;
 			for (int j = 0; j < a.size(); j++)
 			{
@@ -587,11 +587,7 @@ namespace nl_uu_science_gmt
 			}
 			res.push_back(chi);
 		}
-		cout << res.size();
-		for (int i = 0; i < res.size(); i++)
-		{
-			cout << "res " << i << " = " << res[i] << endl;
-		}
+		//cout << bestI << endl;
 		return res;
 	}
 
@@ -626,125 +622,185 @@ namespace nl_uu_science_gmt
 			for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 				scene3d.getCameras()[c]->setVideoFrame(scene3d.getCurrentFrame());
 		}
-		if (!scene3d.getReconstructor().getVisibleVoxels().empty()) {
-			int s = scene3d.getReconstructor().getVisibleVoxels().size();
+		vector<Reconstructor::Voxel*> temp = scene3d.getReconstructor().getVisibleVoxels();
+		if (!temp.empty()) {
+			int s = temp.size();
 			vector<Point2f>points;
 			for (int i = 0; i < s; i++) {
-				points.push_back(cv::Point2f(scene3d.getReconstructor().getVisibleVoxels()[i]->x, scene3d.getReconstructor().getVisibleVoxels()[i]->y));
+				points.push_back(cv::Point2f(temp[i]->x, temp[i]->y));
 			}
 			
 
 			vector<Point2f>centers;
+			labels = {};
 			cv::kmeans(points, 4, labels,
 				TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 6, cv::KMEANS_PP_CENTERS, centers);
-			waitKey(1000);
 			// first Vector layer is the 4 people
 			// second layer is for every person all intervals of colors
 			// third layer is what range it's in, and how often it occurs
-			//vector<vector<vector<float>>> tempHistogram;
-			//
-			//float bucketSize = 32;
-			//float buckets = 256 / bucketSize;
-			//vector<vector<float>> emptyPerson;
-			//
-			//// Makes the empty buckets
-			//for (int i = 0; i < buckets*buckets*buckets; i++)
-			//{
-			//	emptyPerson.push_back({ i*bucketSize, 0 });
-			//}
-			//for (int i = 0; i < 4; i++)
-			//{
-			//	tempHistogram.push_back(emptyPerson);
-			//}
-			//
-			//
-			//// Loop over every camera's image
-			//vector<Camera*> cameras = scene3d.getCameras();
-			//vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
-			//int total[4] = { 0,0,0,0 };
-			//// Loop over all voxels
-			//for (int v = 0; v < voxels.size(); v++)
-			//{
-			//	// Loop over all cameras
-			//	for (int i = 0; i < cameras.size(); i++)
-			//	{
-			//		Mat currentCamImage = cameras[i]->getFrame();
-			//		//cvtColor(currentCamImage, currentCamImage, COLOR_BGR2HSV);
-			//		//
-			//		int x = (voxels[v]->camera_projection[0]).x;
-			//		int y = (voxels[v]->camera_projection[0]).y;
-			//		unsigned char * p = currentCamImage.ptr(y, x); // Y first, X after
-			//		float h = ((float)p[0]);
-			//		float s = ((float)p[1]);
-			//		float v = ((float)p[2]);
-			//
-			//
-			//		//Check which bucket to add to
-			//		for (int hi = 0; hi < 256 / bucketSize; hi++)
-			//		{
-			//			for (int si = 0; si < 256 / bucketSize; si++)
-			//			{
-			//				for (int vi = 0; vi < 256 / bucketSize; vi++)
-			//				{
-			//					if (h >= hi * bucketSize && h < (hi + 1)*bucketSize &&
-			//						s >= si * bucketSize && s < (si + 1)*bucketSize &&
-			//						v >= vi * bucketSize && v < (vi + 1)*bucketSize) {
-			//						tempHistogram[labels[v]][hi * buckets * buckets + si * buckets + vi][1]++;
-			//						total[labels[v]]++;
-			//					}
-			//				}
-			//			}
-			//		}
-			//
-			//	}
-			//}
-			//
-			//
-			////float checksum = 0;
-			//// Normalize all buckets
-			//for (int p = 0; p < tempHistogram.size(); p++)
-			//{
-			//	for (int i = 0; i < buckets*buckets*buckets; i++)
-			//	{
-			//		if (tempHistogram[p][i][1] > 0.9) {
-			//			//cout << "before: " << to_string(tempHistogram[p][i][1]) << endl;
-			//			tempHistogram[p][i][1] /= total[p];
-			//			//cout << "after: " << to_string(tempHistogram[p][i][1]) << endl;
-			//			//checksum += allCamHistograms[p][i][1];
-			//		}
-			//	}
-			//	//checksum = 0;
-			//}
-			////if (refHistograms.empty() || scene3d.isPaused()) {
-			//	// Copy histogram into reference pic
-			//	vector<vector<vector<float>>> temp(tempHistogram);
-			//	refHistograms = temp;
-			//}
+			vector<vector<vector<float>>> tempHistogram;
+			
+			float bucketSize = 16;
+			float buckets = 256 / bucketSize;
+			vector<vector<float>> emptyPerson;
+			
+			// Makes the empty buckets
+			for (int i = 0; i < buckets*buckets*buckets; i++)
+			{
+				emptyPerson.push_back({ i*bucketSize, 0 });
+			}
+			for (int i = 0; i < 4; i++)
+			{
+				tempHistogram.push_back(emptyPerson);
+			}
+			
+			
+			// Loop over every camera's image
+			vector<Camera*> cameras = scene3d.getCameras();
+			vector<Reconstructor::Voxel*> voxels = temp;
+			int total[4] = { 0,0,0,0 };
+			// Loop over all voxels
+			for (int v = 0; v < voxels.size(); v++)
+			{
+				// Loop over all cameras
+				for (int i = 0; i < cameras.size(); i++)
+				{
+					Mat currentCamImage = cameras[i]->getFrame();
+					//cvtColor(currentCamImage, currentCamImage, COLOR_BGR2HSV);
+					//
+					int x = (voxels[v]->camera_projection[0]).x;
+					int y = (voxels[v]->camera_projection[0]).y;
+					unsigned char * p = currentCamImage.ptr(y, x); // Y first, X after
+					float h = ((float)p[0]);
+					float s = ((float)p[1]);
+					float v = ((float)p[2]);
+			
+			
+					//Check which bucket to add to
+					for (int hi = 0; hi < 256 / bucketSize; hi++)
+					{
+						for (int si = 0; si < 256 / bucketSize; si++)
+						{
+							for (int vi = 0; vi < 256 / bucketSize; vi++)
+							{
+								if (h >= hi * bucketSize && h < (hi + 1)*bucketSize &&
+									s >= si * bucketSize && s < (si + 1)*bucketSize &&
+									v >= vi * bucketSize && v < (vi + 1)*bucketSize) {
+									tempHistogram[labels[v]][hi * buckets * buckets + si * buckets + vi][1]++;
+									total[labels[v]]++;
+								}
+							}
+						}
+					}
+			
+				}
+			}
+			
+			
+			//float checksum = 0;
+			// Normalize all buckets
+			for (int p = 0; p < tempHistogram.size(); p++)
+			{
+				for (int i = 0; i < buckets*buckets*buckets; i++)
+				{
+					if (tempHistogram[p][i][1] > 0.9) {
+						//cout << "before: " << to_string(tempHistogram[p][i][1]) << endl;
+						tempHistogram[p][i][1] /= total[p];
+						//cout << "after: " << to_string(tempHistogram[p][i][1]) << endl;
+						//checksum += allCamHistograms[p][i][1];
+					}
+				}
+				//checksum = 0;
+			}
+			if (refHistograms.empty() || scene3d.isPaused()) {
+				// Copy histogram into reference pic
+				vector<vector<vector<float>>> temp(tempHistogram);
+				refHistograms = temp;
+			}
+
 			//for (int i = 0; i < buckets*buckets*buckets; i++)
 			//{
 			//	if (refHistograms[0][i][1] > 0)
 			//		cout << "bucket: " << i << ", count: " << refHistograms[0][i][1] << endl;
 			//}
 			//cout << "done\n";
-
-			vector<float> scores;
+			
+			vector<vector<float>> scores;
+			vector<float> bestScores;
 			// Chi squared to compare two histograms
 			// Do I want to assign the most similars' histogram's labels to every voxel or is there a smarter way?
-			//for (int i = 0; i < refHistograms.size(); i++)
-			//{
-			//	scores.push_back(histoCompare(tempHistogram[i]));
-			//	//cout << "i: " << i << ", bestMatch" << to_string(scores[i]) << endl;
-			//}
-			//for (int i = 0; i < labels.size(); i++)
-			//{
-			//	labels[i] = scores[labels[i]+4];
-			//}
-			////
-			//for (int i = 0; i < labels.size(); i++)
-			//{
-			//	labels[i] -= 4;
-			//}
+			for (int i = 0; i < refHistograms.size(); i++)
+			{
+				scores.push_back(histoCompare(tempHistogram[i]));
+				//cout << "i: " << i << ", bestMatch" << to_string(scores[i]) << endl;
+			}
 
+			// Finding the absolute best combinations
+			vector<vector<float>> permutations = { {0,1,2,3},
+												   {0,1,3,2},
+												   {0,2,1,3},
+												   {0,2,3,1},
+												   {0,3,1,2},
+												   {0,3,2,1},
+												   {1,0,2,3},
+												   {1,0,3,2},
+												   {1,2,0,3},
+												   {1,2,3,0},
+												   {1,3,0,2},
+												   {1,3,2,0},
+												   {2,0,1,3},
+												   {2,0,3,1},
+												   {2,1,0,3},
+												   {2,1,3,0},
+												   {2,3,0,1},
+												   {2,3,1,0},
+												   {3,0,1,2},
+												   {3,0,2,1},
+												   {3,1,0,2},
+												   {3,1,2,0},
+												   {3,2,0,1},
+												   {3,2,1,0}};
+			float bestSol = 100000000;
+			float bestI = 0;
+			for (int i = 0; i < permutations.size(); i++)
+			{
+				float tempSum = 0;
+				for (int j = 0; j < 4; j++)
+				{
+					tempSum += scores[j][permutations[i][j]];
+				}
+				if (tempSum < bestSol) {
+					bestSol = tempSum;
+					bestI = i;
+				}
+			}
+			bestScores = permutations[bestI];
+			//cout << bestSol << " = best" << endl;
+			//Replacing the labels with the better fitting counterpart
+			for (int i = 0; i < labels.size(); i++)
+			{
+				labels[i] = bestScores[labels[i]];
+			}
+
+			for (int i = 0; i < labels.size(); i++)
+			{
+				if (labels[i] == 0) {
+					temp[i]->color = Scalar(1, 0, 0, 0.5f);
+				}
+				else if (labels[i] == 1) {
+					temp[i]->color = Scalar(0, 1, 0, 0.5f);
+				}
+				else if (labels[i] == 2) {
+					temp[i]->color = Scalar(0, 0, 1, 0.5f);
+				}
+				else if (labels[i] == 3) {
+					temp[i]->color = Scalar(0, 1, 1, 0.5f);
+				}
+				else {
+					cout << "uhm how: " << labels[i] << endl;
+					temp[i]->color = Scalar(0, 0, 0, 0);
+				}
+			}
 
 		}
 		if (!scene3d.isPaused())
@@ -1024,23 +1080,7 @@ namespace nl_uu_science_gmt
 		vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
 		for (size_t v = 0; v < voxels.size(); v++)
 		{
-			if (labels.size() != 0) {
-				if (labels[v] == 0) {
-					glColor4f(1, 0, 0, 0.5f);
-				}
-				else if (labels[v] == 1) {
-					glColor4f(1, 1, 0, 0.5f);
-				}
-				else if (labels[v] == 2) {
-					glColor4f(0, 0, 1, 0.5f);
-				}
-				else {
-					glColor4f(0, 0, 0, 1.5f);
-				}
-			}
-			else {
-				glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
-			}
+			glColor4f(voxels[v]->color[0], voxels[v]->color[1], voxels[v]->color[2], voxels[v]->color[3]);
 			glVertex3f((GLfloat)voxels[v]->x, (GLfloat)voxels[v]->y, (GLfloat)voxels[v]->z);
 		}
 
