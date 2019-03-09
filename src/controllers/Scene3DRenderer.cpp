@@ -75,6 +75,8 @@ namespace nl_uu_science_gmt
 		m_h_threshold = 0;
 		m_s_threshold = 40;
 		m_v_threshold = 50;
+		dilate_threshold = 3;
+		erode_threshold = 2;
 
 		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
 		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
