@@ -21,6 +21,7 @@
  // i am not sure about the compatibility with this...
 #define MOUSE_WHEEL_UP   3
 #define MOUSE_WHEEL_DOWN 4
+#define FRAME_TO_USE 1176
 
 namespace nl_uu_science_gmt
 {

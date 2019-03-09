@@ -38,6 +38,8 @@ using namespace cv;
 bool sampleSizeNotCalculated = true;
 vector<int> labels;
 
+
+
 namespace nl_uu_science_gmt
 {
 
@@ -281,6 +283,12 @@ namespace nl_uu_science_gmt
 			}
 			else if (key == 'p' || key == 'P')
 			{
+				bool paused = scene3d.isPaused();
+				scene3d.setPaused(!paused);
+			}
+			else if (key == 'r' || key == 'R')
+			{
+				refHistograms.clear();
 				bool paused = scene3d.isPaused();
 				scene3d.setPaused(!paused);
 			}
@@ -622,6 +630,16 @@ namespace nl_uu_science_gmt
 			for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
 				scene3d.getCameras()[c]->setVideoFrame(scene3d.getCurrentFrame());
 		}
+		int aux_frame = 0;
+
+		if (refHistograms.empty() && !scene3d.isPaused()) {
+			aux_frame = scene3d.getCurrentFrame();
+			scene3d.setCurrentFrame(FRAME_TO_USE);
+			for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
+				scene3d.getCameras()[c]->setVideoFrame(FRAME_TO_USE);
+			cout << "anca ; " << scene3d.getCurrentFrame() << endl;
+		}
+
 		vector<Reconstructor::Voxel*> temp = scene3d.getReconstructor().getVisibleVoxels();
 		if (!temp.empty()) {
 			int s = temp.size();
@@ -712,10 +730,22 @@ namespace nl_uu_science_gmt
 				}
 				//checksum = 0;
 			}
-			if (refHistograms.empty() || scene3d.isPaused()) {
+			if (refHistograms.empty() && !scene3d.isPaused()) {
+				cout << "anca 2 ; " << scene3d.getCurrentFrame() << endl;
 				// Copy histogram into reference pic
-				vector<vector<vector<float>>> temp(tempHistogram);
-				refHistograms = temp;
+				vector<vector<vector<float>>> temp2(tempHistogram);
+				refHistograms = temp2;
+				//then set frame back to 1 bcs it means it was the initial ref histo assignment
+				scene3d.setCurrentFrame(1);
+				for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
+					scene3d.getCameras()[c]->setVideoFrame(1);
+				cout << "anca 3 ;" << scene3d.getCurrentFrame() << endl;
+			}
+			//if paused same as above but no changing frames shit
+			if (refHistograms.empty() && scene3d.isPaused()) {
+				vector<vector<vector<float>>> temp2(tempHistogram);
+					refHistograms = temp2;
+				cout << "anca 4 ;" << scene3d.getCurrentFrame() << endl;
 			}
 
 			//for (int i = 0; i < buckets*buckets*buckets; i++)
