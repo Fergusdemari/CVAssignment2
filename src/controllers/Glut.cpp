@@ -42,7 +42,6 @@ vector<Point2f> allCenters;
 vector<Point2f> centers;
 
 
-
 namespace nl_uu_science_gmt
 {
 
@@ -663,7 +662,7 @@ namespace nl_uu_science_gmt
 					points.push_back(cv::Point2f(visibleVoxels[i]->x, visibleVoxels[i]->y));
 				}
 
-				
+
 				cv::kmeans(points, 4, labels,
 					TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001), 5, cv::KMEANS_PP_CENTERS, centers);
 
@@ -679,12 +678,12 @@ namespace nl_uu_science_gmt
 				// third layer is what range it's in, and how often it occurs
 				vector<vector<vector<float>>> tempHistogram;
 
-				float bucketSize = 16;
+				float bucketSize = 4;
 				float buckets = 256 / bucketSize;
 				vector<vector<float>> emptyPerson;
 
 				// Makes the empty buckets
-				for (int i = 0; i < buckets*buckets*buckets; i++)
+				for (int i = 0; i < buckets*buckets; i++)
 				{
 					emptyPerson.push_back({ i*bucketSize, 0 });
 				}
@@ -704,15 +703,42 @@ namespace nl_uu_science_gmt
 					// Loop over all cameras
 					for (int i = 0; i < cameras.size(); i++)
 					{
-						Mat currentCamImage = cameras[i]->getFrame();
+						Mat currentCamImage = Mat(cameras[i]->getFrame());
 						//cvtColor(currentCamImage, currentCamImage, COLOR_BGR2HSV);
 						//
 						int x = (voxels[v]->camera_projection[0]).x;
 						int y = (voxels[v]->camera_projection[0]).y;
 						unsigned char * p = currentCamImage.ptr(y, x); // Y first, X after
-						float h = ((float)p[0]);
-						float s = ((float)p[1]);
-						float v = ((float)p[2]);
+
+						// manual HSV conversion per color, way faster than HSV'ing the entire image
+						float b2 = (float)p[0] / 255;
+						float g2 = (float)p[1] / 255;
+						float r2 = (float)p[2] / 255;
+						float cmax = max(b2, max(g2, r2));
+						float cmin = min(b2, min(g2, r2));
+						float delta = cmax - cmin;
+						float invdelta = 1 / delta;
+
+						float h, s;
+						//get h
+						if (delta == 0)
+							h = 0;
+						else if (cmax == r2)
+							h = (g2 - b2) * invdelta;
+						else if (cmax == g2)
+							h = (b2 - r2) * invdelta + 2;
+						else
+							h = (r2 - g2) * invdelta + 4;
+						h *= 60;
+
+						//cout << "h " << to_string(h) << endl;
+						//get s
+						cmax == 0 ? s = 0 : s = delta / cmax;
+
+
+						//float h = ((float)p[0]);
+						//float s = ((float)p[1]);
+						//float v = ((float)p[2]);
 
 
 						//Check which bucket to add to
@@ -720,15 +746,15 @@ namespace nl_uu_science_gmt
 						{
 							for (int si = 0; si < 256 / bucketSize; si++)
 							{
-								for (int vi = 0; vi < 256 / bucketSize; vi++)
-								{
-									if (h >= hi * bucketSize && h < (hi + 1)*bucketSize &&
-										s >= si * bucketSize && s < (si + 1)*bucketSize &&
-										v >= vi * bucketSize && v < (vi + 1)*bucketSize) {
-										tempHistogram[labels[v]][hi * buckets * buckets + si * buckets + vi][1]++;
-										total[labels[v]]++;
-									}
+								//for (int vi = 0; vi < 256 / bucketSize; vi++)
+								//{
+								if (h >= hi * bucketSize && h < (hi + 1)*bucketSize &&
+									s >= si * bucketSize && s < (si + 1)*bucketSize /*&&
+									v >= vi * bucketSize && v < (vi + 1)*bucketSize*/) {
+									tempHistogram[labels[v]][hi * buckets + si][1]++;
+									total[labels[v]]++;
 								}
+								//}
 							}
 						}
 
@@ -739,16 +765,18 @@ namespace nl_uu_science_gmt
 				// Normalize all buckets
 				for (int p = 0; p < tempHistogram.size(); p++)
 				{
-					for (int i = 0; i < buckets*buckets*buckets; i++)
+					for (int i = 0; i < buckets*buckets; i++)
 					{
 						// Only normalise it if the value is not 0, saves cpu
 						if (tempHistogram[p][i][1] > 0.9) {
+							//cout << p << "-" << i << ": " << tempHistogram[p][i][1] << endl;
 							tempHistogram[p][i][1] /= total[p];
 						}
 					}
 				}
 
 				if (refHistogramsNotSet) {
+					allCenters.clear();
 					// Copy histogram into reference pic
 					vector<vector<vector<float>>> temp2(tempHistogram);
 					refHistograms = temp2;
@@ -758,10 +786,11 @@ namespace nl_uu_science_gmt
 						scene3d.getCameras()[c]->setVideoFrame(0);
 					refHistogramsNotSet = false;
 				}
-
 				else {
+
 					vector<vector<float>> scores;
 					vector<float> bestScores;
+					vector<float> bestPathScores;
 					// Chi squared to compare two histograms
 					// Do I want to assign the most similars' histogram's labels to every voxel or is there a smarter way?
 					for (int i = 0; i < refHistograms.size(); i++)
@@ -775,76 +804,116 @@ namespace nl_uu_science_gmt
 														   {2,0,1,3}, {2,0,3,1}, {2,1,0,3}, {2,1,3,0}, {2,3,0,1}, {2,3,1,0},
 														   {3,0,1,2}, {3,0,2,1}, {3,1,0,2}, {3,1,2,0}, {3,2,0,1}, {3,2,1,0} };
 
-					//float bestSol = 100000000;
-					//float bestI = 0;
-					//for (int i = 0; i < permutations.size(); i++)
-					//{
-					//	float tempSum = 0;
-					//	for (int j = 0; j < 4; j++)
-					//	{
-					//		tempSum += scores[j][permutations[i][j]];
-					//	}
-					//	if (tempSum < bestSol) {
-					//		bestSol = tempSum;
-					//		bestI = i;
-					//	}
-					//}
-					//bestScores = permutations[bestI];
-
-					//Checking clusters' center position and swap around if too far away
-
-					float bestSol = 100000000;
+					float bestChiSquare = 100000000;
 					float bestI = 0;
 					for (int i = 0; i < permutations.size(); i++)
 					{
-						float tempSum = 0;
+						float tempChiSum = 0;
 						for (int j = 0; j < 4; j++)
 						{
-							float x = (lastPositions[j].x - centers[permutations[i][j]].x);
-							float y = (lastPositions[j].y - centers[permutations[i][j]].y);
-							tempSum += sqrtf(x*x + y * y);
+							tempChiSum += scores[j][permutations[i][j]];
 						}
-						if (tempSum < bestSol) {
-							bestSol = tempSum;
+						if (tempChiSum < bestChiSquare) {
+							bestChiSquare = tempChiSum;
 							bestI = i;
 						}
 					}
 					bestScores = permutations[bestI];
 
-					//Replacing the labels with the better fitting counterpart according to Histograms
+					// set centers in right order based on histograms
+					vector<Point2f> tempCenters;
+					for (int i = 0; i < bestScores.size(); i++) {
+						tempCenters.push_back(centers[bestScores[i]]);
+					}
+
+					// Check max distance between every center and previous center
+					float maxDistance = 0;
+					for (int i = 0; i < 4; i++)
+					{
+						float x = (lastPositions[i].x - tempCenters[i].x);
+						float y = (lastPositions[i].y - tempCenters[i].y);
+						float distance = sqrtf(x * x + y * y);
+						if (distance > maxDistance)
+							maxDistance = distance;
+					}
+
+					//// if after histogramming there seem to be huge jumps between current centers and their previous one,
+					if (maxDistance > 10) {
+						///DEBUG COMMENT
+						//for (int i = 0; i < 4; i++)
+						//{
+						//	cout << "(" << lastPositions[i].x << ", " << lastPositions[i].y << ")\t";
+						//	cout << "(" << tempCenters[i].x << ", " << tempCenters[i].y << ")\n";
+						//
+						//}
+
+						float shortestDistance = 100000000;
+						float bestInd = 0;
+						for (int i = 0; i < permutations.size(); i++)
+						{
+							float distanceThisLoop = 0;
+							for (int j = 0; j < 4; j++)
+							{
+								float x = (lastPositions[j].x - tempCenters[permutations[i][j]].x);
+								float y = (lastPositions[j].y - tempCenters[permutations[i][j]].y);
+								distanceThisLoop += sqrtf(x*x + y * y);
+							}
+							if (distanceThisLoop < shortestDistance) {
+								shortestDistance = distanceThisLoop;
+								bestInd = i;
+							}
+						}
+					
+						// After it turned out that the histograms messed up, reset the Centers 
+						bestPathScores = permutations[bestInd];
+						vector<Point2f> temp2Centers;
+						for (int i = 0; i < bestScores.size(); i++) {
+							temp2Centers.push_back(tempCenters[bestPathScores[i]]);
+						}
+						tempCenters = temp2Centers;
+						///DEBUG COMMENT
+						//cout << "Updated: " << endl;
+						//for (int i = 0; i < 4; i++)
+						//{
+						//	cout << "(" << lastPositions[i].x << ", " << lastPositions[i].y << ")\t";
+						//	cout << "(" << tempCenters[i].x << ", " << tempCenters[i].y << ")\n";
+						//}
+					}
+
+					// By this point, bestScores contain their final value, so the labels and the allCenters can be updated.
+
+					// Finally Add the good tempCenters to allCenters
+					for (int i = 0; i < tempCenters.size(); i++) {
+						allCenters.push_back(tempCenters[i]);
+					}
+
+					// Replace all Labels based on best results from histogram first, and distance measure second.
+					// Set colors of voxels based on their labels
 					for (int i = 0; i < labels.size(); i++)
 					{
 						labels[i] = bestScores[labels[i]];
-					}
-
-					for (int i = 0; i < bestScores.size(); i++) {
-						allCenters.push_back(centers[bestScores[i]]);
-					}
-
-					for (int i = 0; i < 4; i++)
-					{
-						lastPositions[i] = centers[bestScores[i]];
-					}
-
-
-					for (int i = 0; i < labels.size(); i++)
-					{
 						if (labels[i] == 0) {
-							visibleVoxels[i]->color = Scalar(1, 0, 0, 0.5f);
+							visibleVoxels[i]->color = Scalar(1, 0, 0, 1);
 						}
 						else if (labels[i] == 1) {
-							visibleVoxels[i]->color = Scalar(0, 1, 0, 0.5f);
+							visibleVoxels[i]->color = Scalar(0, 1, 0, 1);
 						}
 						else if (labels[i] == 2) {
-							visibleVoxels[i]->color = Scalar(0, 0, 1, 0.5f);
+							visibleVoxels[i]->color = Scalar(0, 0, 1, 1);
 						}
 						else if (labels[i] == 3) {
-							visibleVoxels[i]->color = Scalar(0, 1, 1, 0.5f);
+							visibleVoxels[i]->color = Scalar(0, 1, 1, 1 );
 						}
 						else {
-							cout << "Unusual label found while setting voxelcolors. " << labels[i] << endl;
-							visibleVoxels[i]->color = Scalar(0, 0, 0, 0);
+							cout << "Unusual label found while setting voxelcolors: " << labels[i] << endl;
+							visibleVoxels[i]->color = Scalar(1, 0.4f, 0.6f, 1);
 						}
+					}
+
+					// Set lastposition to the current center positions
+					for (int i = 0; i < 4; i++)
+					{
+						lastPositions[i] = tempCenters[i];
 					}
 				}
 
@@ -958,6 +1027,7 @@ namespace nl_uu_science_gmt
 	}
 
 	void Glut::drawCenters() {
+
 		if (!allCenters.empty()) {
 			glPushMatrix();
 
@@ -967,7 +1037,6 @@ namespace nl_uu_science_gmt
 			glBegin(GL_POINTS);
 
 			//cout << " wtf ";
-
 			for (int i = 0; i < allCenters.size(); i += 4) {
 				glColor4f(1, 0, 0, 0.5f);
 				glVertex3f((GLfloat)allCenters[i].x, allCenters[i].y, 0);
